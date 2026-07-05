@@ -1,0 +1,32 @@
+# ─── Core web app ─────────────────────────────────────
+flask>=3.0
+flask-socketio>=5.3
+aiofiles>=23.0
+
+# ─── Image / video processing ─────────────────────────
+opencv-python>=4.8
+Pillow>=10.0
+numpy>=1.24
+moviepy>=2.0
+
+# ─── TTS ──────────────────────────────────────────────
+edge-tts>=6.1          # default narrator voice (free)
+
+# ─── Web scraping / chapter downloads ─────────────────
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.0
+curl_cffi>=0.7         # Cloudflare-friendly fetching
+cloudscraper>=1.2
+DrissionPage>=4.1      # headless-browser fallback for protected sites
+
+# ─── Panel detection (YOLO) ───────────────────────────
+ultralytics>=8.4
+torch>=2.0
+torchvision>=0.15
+
+# ─── Text extraction (Magi v2) + bubble removal ──────
+transformers>=4.45
+einops
+timm
+easyocr>=1.7           # finds speech-bubble text for inpainting

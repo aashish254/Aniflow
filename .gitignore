@@ -1,0 +1,70 @@
+# ─── Python ──────────────────────────────────────────
+venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# ─── OS / Editor ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── AI-assistant configs (local only) ───────────────
+.claude/
+.agents/
+
+# ─── User data (downloaded manhwa + generated artefacts) ──
+input/
+output/
+projects/
+casts/
+temp/
+manhwa_download/
+manhwa_stitch/
+manhwa_detect/
+manhwa_crop/
+manhwa_text/
+manhwa_audio/
+manhwa_clips/
+
+# ─── Local runtime files ─────────────────────────────
+server.log
+server.pid
+*.log
+
+# ─── Media at root (never commit renders) ────────────
+*.mp4
+*.mp3
+*.wav
+*.webm
+
+# ─── Exception: example outputs are committed ────────
+!example_output/**
+
+# ─── AI model weights (large) ────────────────────────
+magiv2
+magiv2/
+# Note: models/ contains committed YOLO weights needed to run the app
+
+# ─── Unused / generated assets ───────────────────────
+logo/
+static/aniflow-logo.jpg
+static/logo.jpg
+static/logo.png
+
+# ─── Tutorial/Demo files (local only) ────────────────
+yt tutorial/
+
+# ─── Secrets ─────────────────────────────────────────
+.env
+SECURITY_AUDIT.txt

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AniFlow - Automated Manhwa Video Creation</title>
+<meta name="description" content="AniFlow - Create manhwa and webtoon recap videos with AI-powered narration and automated processing">
+<link rel="stylesheet" href="/static/css/style.css?v=34">
+<link rel="icon" type="image/jpeg" href="/static/logo-small.jpg">
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ═══════════ Header ═══════════ -->
+  <header class="app-header">
+    <div class="app-logo">
+      <img src="/static/logo-small.jpg?v=2" alt="AniFlow logo"
+           onerror="if (!this.dataset.fallback) { this.dataset.fallback = 1; this.src = '/static/logo-small.png?v=2'; }"
+           style="width: 42px; height: 42px; border-radius: 10px; object-fit: cover; display: block; border: 1.5px solid rgba(255,255,255,0.22); box-shadow: 0 0 0 2px rgba(139,92,246,0.25), 0 2px 10px rgba(0,0,0,0.45);">
+      <div>
+        <span class="app-logo-text">AniFlow</span>
+        <span class="app-logo-ver">v2</span>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="status-dot"><div class="dot" id="dotOllama"></div> Ollama</div>
+      <div class="status-dot"><div class="dot" id="dotFFmpeg"></div> FFmpeg</div>
+      <div class="status-dot"><div class="dot" id="dotTTS"></div> TTS</div>
+    </div>
+  </header>
+
+  <!-- ═══════════ VIEW: Home (Mode Selection) ═══════════ -->
+  <div id="viewHome">
+    <h2 style="font-size:24px; font-weight:800; margin-bottom:4px;">Choose Your Recap Style</h2>
+    <p class="text-sm text-dim">Select a pipeline mode to get started</p>
+
+    <div class="mode-selection">
+      <!-- Dialogue Recap -->
+      <div class="mode-card" onclick="selectMode('dialogue')">
+        <div class="mode-card-icon dialogue">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="9" y="2.5" width="6" height="11" rx="3" fill="#60a5fa"/>
+            <path d="M5.5 11a6.5 6.5 0 0 0 13 0" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 17.5V21M8.5 21h7" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="mode-card-title">Dialogue Recap</div>
+        <div class="mode-card-desc">
+          Keep speech bubbles visible. Extract dialogue text from panels and convert directly to audio.
+          Perfect for letting the original dialogue speak for itself.
+        </div>
+        <div class="mode-card-steps">
+          <span class="mode-step-tag">Load</span>
+          <span class="mode-step-tag">Stitch</span>
+          <span class="mode-step-tag">Detect</span>
+          <span class="mode-step-tag">Crop</span>
+          <span class="mode-step-tag">Extract Text</span>
+          <span class="mode-step-tag">TTS</span>
+          <span class="mode-step-tag">Video</span>
+        </div>
+      </div>
+
+      <!-- Narrated Recap -->
+      <div class="mode-card" onclick="selectMode('narrated')">
+        <div class="mode-card-icon narrated">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g transform="rotate(-8 12 7)">
+              <rect x="2" y="4.8" width="20" height="4.4" rx="1" fill="#a78bfa"/>
+              <rect x="5" y="4.8" width="2.6" height="4.4" fill="#0b0d12"/>
+              <rect x="10" y="4.8" width="2.6" height="4.4" fill="#0b0d12"/>
+              <rect x="15" y="4.8" width="2.6" height="4.4" fill="#0b0d12"/>
+            </g>
+            <rect x="2" y="11" width="20" height="10" rx="2" fill="#a78bfa"/>
+            <path d="M10 13.8l5.2 2.2-5.2 2.2z" fill="#0b0d12"/>
+          </svg>
+        </div>
+        <div class="mode-card-title">Narrated Recap</div>
+        <div class="mode-card-desc">
+          Remove speech bubbles for clean panels. AI narrates the story in dramatic 3rd person.
+          Supports Ollama (local), Gemini, or Claude for narration.
+        </div>
+        <div class="mode-card-steps">
+          <span class="mode-step-tag">Load</span>
+          <span class="mode-step-tag">Stitch</span>
+          <span class="mode-step-tag">Detect</span>
+          <span class="mode-step-tag">Crop</span>
+          <span class="mode-step-tag">Extract</span>
+          <span class="mode-step-tag">Clean</span>
+          <span class="mode-step-tag">Narrate</span>
+          <span class="mode-step-tag">TTS</span>
+          <span class="mode-step-tag">Video</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Projects -->
+    <div class="section-label">Recent Projects</div>
+    <div class="projects-grid" id="projectsGrid">
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <div class="empty-state-text">No projects yet. Select a mode above to start creating.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ VIEW: Wizard ═══════════ -->
+  <div id="viewWizard" class="hidden">
+    <div class="back-link" onclick="goHome()">← Back to Home</div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator" id="stepIndicator"></div>
+
+    <!-- Step Content (rendered dynamically) -->
+    <div id="stepContent"></div>
+  </div>
+
+</div><!-- /app-container -->
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ═══════════ Modal: Folder Browser ═══════════ -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modalTitle">Modal</div>
+    <div id="modalBody"></div>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<!-- SocketIO -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="/static/js/app.js?v=39"></script>
+
+</body>
+</html>

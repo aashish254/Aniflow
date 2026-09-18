@@ -1,0 +1,44 @@
+name: Feature Request
+description: Suggest a new feature for AniFlow
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Help us understand your idea.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or features you've considered?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      options:
+        - Scraping / Downloading
+        - Panel Detection / Cropping
+        - Text / Dialogue Extraction
+        - TTS / Audio
+        - Video Rendering
+        - Web UI
+        - CLI
+        - Other
+    validations:
+      required: true

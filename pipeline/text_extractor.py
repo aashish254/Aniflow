@@ -73,28 +73,45 @@ def extract_text_all_panels(panels: list[dict], state,
             box_map[idx + 1] = box
 
     extracted_data = []
-    for i, panel in enumerate(panels):
-        if progress_callback:
-            progress_callback(i + 1, total, f"Extracting dialogue from Panel {i + 1}/{total}...")
 
+    # ⚡ SPEED MODE: panels are independent — the vision model can read several
+    # in parallel. Ollama batches concurrent requests internally, so 2 workers
+    # is roughly a 2× wall-clock cut on Apple Silicon without cache thrash.
+    ai_workers = getattr(config, 'AI_SPEED_WORKERS', 2) if getattr(config, 'SPEED_MODE', False) else 1
+    can_parallel = engine not in ('magi',)  # magi is chapter-wide, not per-panel
+
+    def _extract_one(idx_panel):
+        i, panel = idx_panel
         text = ""
         visual_desc = ""
-        panel_id = panel.get('panel_id', i + 1)
-        
         try:
             # Use the pre-generated padded crop for AI context
             img_to_send = panel.get('padded_path') or panel.get('path')
-            
             if img_to_send and os.path.exists(img_to_send):
                 text, visual_desc = _extract_text_and_description(img_to_send, vision_model, host, engine)
-                
         except Exception as e:
-            print(f"[TextExtractor] Error on Panel {panel_id}: {e}")
+            print(f"[TextExtractor] Error on Panel {panel.get('panel_id', i + 1)}: {e}")
+        return i, panel, text, visual_desc
 
-        # Store in panel and chapter script
-        panel['text'] = text.strip() if text.strip() else ""
-        panel['visual_description'] = visual_desc.strip() if visual_desc.strip() else ""
-        
+    if ai_workers > 1 and can_parallel and total > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        print(f"[TextExtractor] Speed Mode: extracting {total} panels with {ai_workers} parallel AI workers")
+        with ThreadPoolExecutor(max_workers=ai_workers) as pool:
+            for i, panel, text, visual_desc in pool.map(_extract_one, enumerate(panels)):
+                panel['text'] = text.strip() if text.strip() else ""
+                panel['visual_description'] = visual_desc.strip() if visual_desc.strip() else ""
+                if progress_callback:
+                    progress_callback(i + 1, total, f"Extracting dialogue from Panel {i + 1}/{total}...")
+    else:
+        for i, panel in enumerate(panels):
+            if progress_callback:
+                progress_callback(i + 1, total, f"Extracting dialogue from Panel {i + 1}/{total}...")
+            i, panel, text, visual_desc = _extract_one((i, panel))
+            panel['text'] = text.strip() if text.strip() else ""
+            panel['visual_description'] = visual_desc.strip() if visual_desc.strip() else ""
+
+    for i, panel in enumerate(panels):
+        panel_id = panel.get('panel_id', i + 1)
         txt_lines.append(f"[PANEL {panel_id}]")
         txt_lines.append(panel['text'] if panel['text'] else "(no dialogue)")
         txt_lines.append("")

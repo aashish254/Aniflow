@@ -21,6 +21,11 @@ SPEED_MODE = False
 # Keys: clip_workers, encoder, edge_workers, elevenlabs_workers, kokoro_gpu
 SPEED_SETTINGS = {}
 
+# ⚡ Concurrency for the AI steps (extraction + narration Phase 1) when Speed
+# Mode is ON. 2 is the sweet spot for Ollama on Apple Silicon — the runner
+# batches requests without thrashing the KV cache. Override via env var.
+AI_SPEED_WORKERS = int(os.getenv("AI_SPEED_WORKERS", "2"))
+
 # ─── Top-level organisation ──────────────────────────────────────
 INPUT_DIR  = os.path.join(BASE_DIR, "input")   # raw source images
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")  # all generated artefacts
@@ -93,8 +98,13 @@ DEFAULT_TEXT_EXTRACTION_METHOD = "magi"
 OLLAMA_HOST = "http://localhost:11434"
 OLLAMA_MODEL = "qwen2.5vl:7b"               # Legacy fallback
 VISION_MODEL  = "qwen2.5vl:3b"       # Step 1 — The Eyes (text extraction + scene description)
-WRITER_MODEL  = "qwen2.5vl:3b" # Step 2 — The Writer (dramatic narration) [legacy, used when DECOUPLED_NARRATION=False]
-TEXT_WRITER_MODEL = "qwen2.5:14b"  # Step 2b — Pure-text storyteller (decoupled pipeline)
+WRITER_MODEL  = "qwen2.5vl:3b" # Step 2 — The Writer (narration) [legacy, used when DECOUPLED_NARRATION=False]
+# Step 2b — Pure-text storyteller (decoupled pipeline).
+# gemma3:27b writes noticeably more natural, human-sounding recap narration
+# than smaller models. Override via TEXT_WRITER_MODEL env var (e.g. qwen2.5:14b
+# on machines with <24GB VRAM/RAM — the narrator auto-falls-back to whatever
+# text model is installed if the preferred one is missing).
+TEXT_WRITER_MODEL = os.getenv("TEXT_WRITER_MODEL", "gemma3:27b")
 DECOUPLED_NARRATION = True         # True = Vision Parser → Text Storyteller (recommended)
 OLLAMA_TIMEOUT = 180  # seconds per panel
 LLM_IMAGE_MAX_SIDE = int(os.getenv("LLM_IMAGE_MAX_SIDE", "1400"))
@@ -217,12 +227,32 @@ CAPCUT_OUT_ANIMATION = "fade"
 
 # ─── Script Rewriter ─────────────────────────────────────────────
 REWRITER_STYLES = {
-    "dramatic": "Rewrite with more dramatic tension and urgency. Use vivid action words.",
-    "casual": "Rewrite in a casual, conversational YouTube narrator style.",
-    "epic": "Rewrite like an epic fantasy novel narration with grand language.",
-    "horror": "Rewrite with a dark, ominous horror tone. Build dread and suspense.",
-    "comedy": "Rewrite with humor and wit. Add funny observations.",
-    "hype": "Rewrite like an excited anime reactor. High energy and hype.",
+    "casual": (
+        "Rewrite like a friend casually explaining the chapter to another friend. "
+        "Natural spoken language, contractions, no theatrics. Connect the events into "
+        "one continuous flow instead of listing them."
+    ),
+    "dramatic": (
+        "Rewrite with more tension and urgency, but still sound like a person talking, "
+        "not a movie trailer. Short punchy sentences, one flowing sequence."
+    ),
+    "epic": (
+        "Rewrite with a grander, more cinematic tone — bigger stakes, weightier words — "
+        "while keeping it spoken and continuous, never purple prose."
+    ),
+    "horror": (
+        "Rewrite with a dark, ominous tone. Build dread through understatement and pacing, "
+        "not exclamation marks. Keep it flowing like a story being told in a quiet room."
+    ),
+    "comedy": (
+        "Rewrite with dry wit. Let the narrator react to absurd or ridiculous moments "
+        "like a friend would ('bro really thought that would work'). Never force a joke "
+        "over actual story information."
+    ),
+    "hype": (
+        "Rewrite like an excited friend who just read the chapter and can't wait to tell "
+        "you about it. High energy, but keep the story clear and continuous."
+    ),
 }
 
 

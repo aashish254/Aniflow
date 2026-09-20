@@ -40,24 +40,26 @@ def _fast_json(payload: dict) -> dict:
 # CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-SCENE_SIZE_DEFAULT = 1    # per-panel narration (each panel = its own scene)
+SCENE_SIZE_DEFAULT = 3    # panels per narration beat (3-4 connected sentences per beat,
+                          # matching viral recap style — one flowing story, not isolated quips)
 PER_PANEL_DURATION = 6.5  # seconds per panel (user wants 6-7s each)
 MAX_IMG_SIDE_ALL   = 640  # Option A: all images — compressed tightly
 MAX_IMG_SIDE_PAIR  = 800  # Option B fallback: first+last — higher quality
 
 # ── The System Prompt (Phase 2 — Text Storyteller) ────────────────────────────
 
-SYSTEM_PROMPT_DECOUPLED = """You are the scriptwriter for a viral manhwa/anime recap YouTube channel.
-Your voice is dry, punchy, and ironic — like a witty friend recapping the story, not a dramatic audiobook narrator.
+SYSTEM_PROMPT_DECOUPLED = """You narrate manhwa recap videos. Your #1 goal: sound like a person casually explaining the chapter to a friend who hasn't read it — NOT like an AI describing images one by one.
 
 ABSOLUTE RULES:
-1. WRITE 1 SHORT SENTENCE PER PANEL. Maximum 25 words. Be ruthless about cutting words.
-2. NEVER describe images. NEVER say 'in this panel', 'we see', 'the image shows'. You're telling a story, not captioning a photo.
-3. USE THE DIALOGUE. When characters speak, weave their words into your sentence naturally. Don't ignore it.
-4. DRY WIT OVER DRAMA. Humor and irony land harder than melodrama. Match the internet-aware tone of modern manhwa.
-5. FLOW from the previous line. Each sentence must connect naturally — sometimes start mid-thought, like a continuation.
-6. PRESENT TENSE, THIRD PERSON. Active voice only.
-7. NEVER INVENT CHARACTER NAMES. Only use names that appear in the Dialogue or KNOWN CHARACTERS list. If you don't know a character's name, say 'he', 'she', 'the guy', 'our MC', etc. NEVER guess or hallucinate a name."""
+1. WRITE 2-4 SENTENCES PER BEAT (roughly 35-70 words). Tell the story fully — give context, motivation, and why it matters. Do NOT write a single throwaway line.
+2. NEVER describe what's already obvious visually. The viewer is LOOKING at the art. Your job is to add context, backstory, stakes, and transitions the art can't show — not to caption it.
+3. USE THE DIALOGUE. When characters speak, weave what they said into your narration naturally (paraphrase or short quote — whichever sounds better out loud).
+4. HAVE A PERSONALITY. React to absurd or funny moments the way a friend would ('bro really thought that would work', 'and somehow, this actually works') — but only WHILE still explaining what's happening. The joke never replaces the story.
+5. CONNECT THE BEATS. Each beat continues the previous one as ONE continuous story — use transitions ('so', 'and that's when', 'meanwhile', 'which means', 'that hope didn't last long'). Never restart, never summarize, never treat every moment as a separate event.
+6. THE OPENING IS A HOOK. If this is the first beat of the chapter, open with the most interesting question, twist, or absurd situation — make the viewer need to know what happens next. NEVER open with 'This story begins', 'Meet our protagonist', or any introduction formula.
+7. PRESENT TENSE, THIRD PERSON. Active voice only.
+8. NEVER say 'in this panel', 'we see', 'the image shows', or reference panels/artwork. You're telling a story, not captioning a photo.
+9. NEVER INVENT CHARACTER NAMES. Only use names that appear in the Dialogue or KNOWN CHARACTERS list. If you don't know a character's name, say 'he', 'she', 'our boy', 'our protagonist', etc. NEVER guess or hallucinate a name."""
 
 # ── Legacy System Prompt (for DECOUPLED_NARRATION=False) ──────────────────────
 
@@ -194,7 +196,31 @@ def _extract_visual_beats_for_scene(
     timeout: int = 180,
     cancel_check=None,
 ) -> str:
-    """Phase 1: Extract visual beats for all panels in a scene, return combined text."""
+    """Phase 1: Extract visual beats for all panels in a scene, return combined text.
+
+    ⚡ SPEED MODE: panels in a scene are independent — beats are extracted in
+    parallel (Ollama batches the concurrent vision requests internally), then
+    re-joined in panel order so the story sequence is preserved.
+    """
+    ai_workers = getattr(config, 'AI_SPEED_WORKERS', 2) if getattr(config, 'SPEED_MODE', False) else 1
+
+    if ai_workers > 1 and len(scene_panels) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        beats = {}
+        with ThreadPoolExecutor(max_workers=ai_workers) as pool:
+            futures = {
+                pool.submit(_extract_visual_beat_for_panel, p, host, vision_model, timeout): idx
+                for idx, p in enumerate(scene_panels)
+            }
+            for fut, idx in futures.items():
+                if cancel_check and cancel_check():
+                    break
+                beat = fut.result()
+                if beat:
+                    beats[idx] = beat
+                    print(f"[SceneNarrator] Phase 1 panel {scene_panels[idx].get('panel_id', '?')}: {beat[:60]}...")
+        return ' '.join(beats[i] for i in sorted(beats)) if beats else ''
+
     beats = []
     for p in scene_panels:
         if cancel_check and cancel_check():
@@ -399,7 +425,7 @@ def _build_decoupled_prompt(
     NO images are referenced. The visual context comes from the Phase 1
     visual beats text, which was extracted by the vision model.
     """
-    soft_max = 25
+    soft_max = 70
 
     # ── Cast characters ──────────────────────────────────────────────────────
     cast_section = ""
@@ -444,29 +470,29 @@ def _build_decoupled_prompt(
         "=========================================\n"
         "Visual Beat: Guy gathering food in forest with a small girl.\n"
         "Dialogue: (none)\n"
-        "Output: That leaves Ian gathering food with his little sister instead of enjoying the usual isekai starter pack.\n\n"
+        "Output: So instead of the usual isekai starter pack, our guy's stuck foraging in the woods with his little sister. Not exactly the overpowered new life he was promised.\n\n"
         "Visual Beat: Two kids standing on a hill, one pointing at the other angrily.\n"
         "Dialogue: 'gross crow'\n"
-        "Output: The village kids also call him a gross crow because black hair is apparently a crime here.\n\n"
+        "Output: And it gets worse — the village kids have a nickname for him. They call him a gross crow, because apparently in this world, being born with black hair is basically a crime.\n\n"
         "Visual Beat: Close-up of a character looking at a status window that says NOBODY.\n"
         "Dialogue: 'NOBODY'\n"
-        "Output: Even his long-awaited status window takes one look at him and declares him a NOBODY.\n\n"
+        "Output: Then his status window finally shows up, the thing he's been waiting years for. It takes one look at him and declares him a NOBODY. Even the system won't give this guy a break.\n\n"
         "Visual Beat: Man sitting at a desk looking at a phone/laptop.\n"
         "Dialogue: 'computer engineering'\n"
-        "Output: Ritsuki Kadoyama had just escaped his trash life by entering computer engineering.\n\n"
+        "Output: Ritsuki had just clawed his way out of a dead-end life by getting accepted into computer engineering. For the first time ever, things were actually looking up for him.\n\n"
         "Visual Beat: Train hitting something at night.\n"
         "Dialogue: (none)\n"
-        "Output: until Train-kun canceled university permanently.\n\n"
+        "Output: And that's when Train-kun cancels his university plans — permanently. Because of course the one time his life turns around, it ends on the same night.\n\n"
         "Visual Beat: Man waking up confused in a fantasy setting.\n"
         "Dialogue: 'I BEAT IT!!!'\n"
-        "Output: He clears the 100th floor after ten years — then the game turns real.\n\n"
+        "Output: He spends ten brutal years grinding to clear all 100 floors, and the second he finally beats the game — it becomes real. Suddenly the monsters, the levels, all of it actually matters.\n\n"
         "=========================================\n"
         "YOUR TURN\n"
         "=========================================\n"
         f"{continuity}\n"
         f"Visual Beat: {visual_beats if visual_beats else '(no image description available)'}\n"
         f"Dialogue: {dialogue_text}\n\n"
-        "Output (1 sentence, max 25 words, match the example style above):"
+        "Output (2-4 sentences, 35-70 words, match the example style above):"
     )
 
     return SYSTEM_PROMPT_DECOUPLED, user_content, soft_max
@@ -546,6 +572,7 @@ def narrate_scene(
     cancel_check=None,
     chapter_context: str = None,
     vision_model: str = None,
+    precomputed_beat: str = None,
 ) -> str:
     """
     Generate one flowing narration for a group of panels (one scene).
@@ -568,7 +595,7 @@ def narrate_scene(
         return _narrate_scene_decoupled(
             scene_panels, host, model, story_so_far,
             cast_characters, timeout, cancel_check,
-            chapter_context, vision_model,
+            chapter_context, vision_model, precomputed_beat,
         )
     else:
         return _narrate_scene_legacy(
@@ -588,6 +615,7 @@ def _narrate_scene_decoupled(
     cancel_check=None,
     chapter_context: str = None,
     vision_model: str = None,
+    precomputed_beat: str = None,
 ) -> str:
     """
     DECOUPLED: Phase 1 (vision → visual beats) → Phase 2 (text → narration).
@@ -596,13 +624,17 @@ def _narrate_scene_decoupled(
     p_ids = [p['panel_id'] for p in scene_panels]
     v_model = vision_model or getattr(config, 'VISION_MODEL', 'qwen2.5vl:3b')
 
-    # ── Phase 1: Extract visual beats ────────────────────────────────────────
-    print(f"[SceneNarrator] Panels {p_ids[0]}-{p_ids[-1]}: "
-          f"Phase 1 → extracting visual beats ({v_model})...")
+    # ── Phase 1: Extract visual beats (skip if the parallel pre-pass did it) ──
+    if precomputed_beat is not None:
+        visual_beats = precomputed_beat
+        print(f"[SceneNarrator] Panels {p_ids[0]}-{p_ids[-1]}: using precomputed beats")
+    else:
+        print(f"[SceneNarrator] Panels {p_ids[0]}-{p_ids[-1]}: "
+              f"Phase 1 → extracting visual beats ({v_model})...")
 
-    visual_beats = _extract_visual_beats_for_scene(
-        scene_panels, host, v_model, timeout, cancel_check
-    )
+        visual_beats = _extract_visual_beats_for_scene(
+            scene_panels, host, v_model, timeout, cancel_check
+        )
     if cancel_check and cancel_check():
         return "[cancelled]"
 
@@ -614,7 +646,7 @@ def _narrate_scene_decoupled(
         scene_panels, story_so_far, visual_beats,
         chapter_context, cast_characters,
     )
-    num_predict = max(80, int(soft_max * 1.5))
+    num_predict = max(200, int(soft_max * 2.5))
 
     print(f"[SceneNarrator] Panels {p_ids[0]}-{p_ids[-1]}: "
           f"Phase 2 → writing narration ({text_model}, NO images, budget={soft_max}w)")
@@ -890,6 +922,43 @@ def narrate_all_scenes(
     # ── Load full chapter text (Global Context) ──────────────────────────────
     chapter_context = _load_chapter_text(project_dir)
 
+    # ── ⚡ SPEED MODE: pre-extract ALL Phase 1 visual beats in parallel ───────
+    # Phase 1 (vision → beats) has NO cross-scene dependency, so it can be
+    # fully parallelised. Phase 2 (storyteller) stays sequential because each
+    # line must flow from the previous one — but it no longer waits on vision.
+    # Typical cut: ~40-50% of total narration wall-clock time.
+    decoupled = getattr(config, 'DECOUPLED_NARRATION', True)
+    ai_workers = getattr(config, 'AI_SPEED_WORKERS', 2) if getattr(config, 'SPEED_MODE', False) else 1
+    precomputed_beats = {}
+
+    if decoupled and ai_workers > 1 and total > 1:
+        v_model = vision_model or getattr(config, 'VISION_MODEL', 'qwen2.5vl:3b')
+        todo = [
+            (f"scene_{i + 1:03d}", sp)
+            for i, sp in enumerate(scenes)
+            if f"scene_{i + 1:03d}" not in existing_narrations
+        ]
+        if todo:
+            from concurrent.futures import ThreadPoolExecutor
+            print(f"[SceneNarrator] ⚡ Speed Mode: pre-extracting visual beats for "
+                  f"{len(todo)} scenes with {ai_workers} parallel AI workers")
+            if progress_callback:
+                progress_callback(0, total, f"Reading panels (parallel vision pass, {len(todo)} scenes)...")
+            with ThreadPoolExecutor(max_workers=ai_workers) as pool:
+                futures = {
+                    pool.submit(_extract_visual_beats_for_scene, sp, host, v_model,
+                                180, cancel_check): sid
+                    for sid, sp in todo
+                }
+                done_count = 0
+                for fut, sid in futures.items():
+                    if cancel_check and cancel_check():
+                        break
+                    precomputed_beats[sid] = fut.result()
+                    done_count += 1
+                    if progress_callback:
+                        progress_callback(0, total, f"Vision pass: {done_count}/{len(todo)} scenes read")
+   
     # ── Main narration loop ──────────────────────────────────────────────────
     story_so_far  = []     # rolling memory (last 3 narrations)
     scene_results = []
@@ -923,6 +992,7 @@ def narrate_all_scenes(
                 cancel_check=cancel_check,
                 chapter_context=chapter_context,
                 vision_model=vision_model,
+                precomputed_beat=precomputed_beats.get(scene_id),
             )
 
         if narration == '[cancelled]':

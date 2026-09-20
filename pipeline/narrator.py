@@ -7,9 +7,10 @@ Phase 1 (The Eyes / Structural Parser) → qwen2.5vl:3b  [vision model]
   - Extracts a raw "visual beat" — factual description of what is happening
   - Does NOT write narration, just metadata
 
-Phase 2 (The Writer / Cinematic Storyteller) → qwen2.5:14b  [pure text model]
+Phase 2 (The Writer / Casual Storyteller) → gemma3:27b  [pure text model]
   - Receives ONLY text: visual beat + extracted dialogue + story-so-far
-  - Writes cinematic, viral YouTube-style recap narration
+  - Writes casual, flowing YouTube-style recap narration (a friend explaining
+    the chapter — not an AI captioning images)
   - 100% of model weights focused on creative writing (no image processing)
 
 Toggle: config.DECOUPLED_NARRATION
@@ -29,19 +30,19 @@ import config
 # ─── Model constants ──────────────────────────────────────────────
 VISION_MODEL   = "qwen2.5vl:3b"          # Phase 1: vision parser (extracts visual beats)
 WRITER_MODEL   = "qwen2.5vl:3b"          # Legacy: single vision-model narration
-TEXT_WRITER    = "qwen2.5:14b"            # Phase 2: pure-text cinematic storyteller
+TEXT_WRITER    = getattr(config, 'TEXT_WRITER_MODEL', 'gemma3:27b')  # Phase 2: pure-text storyteller
 FALLBACK_MODEL = "qwen2.5vl:7b"
 
 # Bump when the narration prompt changes meaningfully — cached narrations made
 # with an older prompt are treated as stale and get regenerated on re-run.
-NARRATION_PROMPT_VERSION = 2
+NARRATION_PROMPT_VERSION = 4
 
 
 class Narrator:
     """
     Decoupled narrator with two phases:
       Phase 1 (Vision Parser):       qwen2.5vl:3b — extracts visual beats from panel images
-      Phase 2 (Cinematic Storyteller): qwen2.5:14b — writes narration from text-only input
+      Phase 2 (Casual Storyteller):  gemma3:27b — writes narration from text-only input
 
     Toggle: config.DECOUPLED_NARRATION (True = decoupled, False = legacy single-model)
     """
@@ -438,42 +439,47 @@ class Narrator:
 
         # ── Build the full prompt ─────────────────────────────────
         prompt = (
-            "You are narrating a manhwa recap video, one panel at a time — like the best recap channels on YouTube. "
-            "The viewer cannot read the panel; your narration IS the story for them.\n\n"
+            "You narrate manhwa recap videos. Your #1 goal: sound like a person casually "
+            "explaining the chapter to a friend who hasn't read it — NOT like an AI describing "
+            "images one by one. The viewer can SEE the art; your narration IS the story.\n\n"
             "RULES:\n"
-            "1. Write 1-2 SHORT sentences for this panel. Maximum 25 words. Plain, natural storytelling.\n"
-            "2. Tell the STORY in order. Your line must read as the next beat of one continuous story, "
-            "picking up where the previous narration stopped. Do not restart or summarize.\n"
-            "3. PRESENT TENSE, THIRD PERSON. Active voice.\n"
-            "4. When the panel has dialogue, cover what was said naturally — paraphrase or quote briefly, "
-            "whichever sounds better spoken aloud. Never ignore the dialogue.\n"
-            "5. Write like a human narrator, NOT a joke machine: NO forced irony, NO 'because even X needs Y' "
-            "constructions, NO repeated sentence patterns between panels, NO sarcasm unless the scene itself is sarcastic.\n"
-            "6. NEVER describe images ('in this panel', 'we see') and NEVER comment on art.\n"
-            "7. NEVER invent character names. Use only names from the Dialogue or KNOWN CHARACTERS list; "
+            "1. Write 2-4 sentences for this beat (roughly 35-70 words). Tell the story fully — context, motivation, why it matters. Never a single throwaway line.\n"
+            "2. NEVER describe what's already obvious visually. Add the context, motivation, or transition "
+            "the art can't show — don't caption what's on screen.\n"
+            "3. FLOW: your line continues the previous narration as ONE continuous story. Use transitions "
+            "('so', 'and that's when', 'meanwhile'). Never restart, never summarize.\n"
+            "4. PRESENT TENSE, THIRD PERSON. Active voice.\n"
+            "5. When there's dialogue, weave what was said into your sentence naturally — paraphrase or "
+            "quote briefly, whichever sounds better spoken aloud. Never ignore the dialogue.\n"
+            "6. Have a PERSONALITY: you can react to absurd or funny moments like a friend would "
+            "('bro really thought that would work') — just never let the joke bury the story.\n"
+            "7. If this is the opening of the chapter, your line is the HOOK: lead with the most interesting "
+            "question, twist, or absurd situation. NEVER start with 'This story begins' or 'Meet our protagonist'.\n"
+            "8. NEVER describe images ('in this panel', 'we see') and NEVER comment on art.\n"
+            "9. NEVER invent character names. Use only names from the Dialogue or KNOWN CHARACTERS list; "
             "otherwise say 'he', 'she', 'the guy', etc.\n"
-            "8. Vary sentence rhythm naturally. Quiet panels get quiet lines; dramatic panels get punch.\n\n"
+            "10. Vary sentence rhythm naturally. Quiet moments get quiet lines; big moments get punch.\n\n"
             "=========================================\n"
-            "TONE EXAMPLES (this is the voice — natural, flowing, story-first)\n"
+            "TONE EXAMPLES (this is the voice — a friend walking you through the chapter)\n"
             "=========================================\n"
             "Visual Beat: Guy holding a sealed love letter at his desk.\n"
             "Dialogue: 'This love letter... a whole semester in the making.'\n"
-            "Output: Takumi has been carrying a love letter around for an entire semester, waiting for the courage to hand it over.\n\n"
+            "Output: So this guy's been sitting on a love letter for an entire semester, and it's eating him alive. Today's the day he finally works up the nerve. Or at least, that's what he keeps telling himself.\n\n"
             "Visual Beat: Same guy turns around in class, letter in hand.\n"
             "Dialogue: 'Today I'm gonna give it to her.'\n"
-            "Output: Today, he finally decides to give it to her.\n\n"
+            "Output: And there he goes — letter in hand, heart hammering. He's fully convinced today is the day everything changes.\n\n"
             "Visual Beat: A girl sits by the window, sneaking glances at him.\n"
             "Dialogue: 'Because she occasionally peeks at me.'\n"
-            "Output: And the girl he likes keeps sneaking glances at him from across the classroom.\n\n"
+            "Output: Turns out the girl he likes has been sneaking glances at him this whole time. Naturally, his brain takes that tiny signal and runs a mile with it.\n\n"
             "Visual Beat: Phone screen showing a university admission result.\n"
             "Dialogue: 'computer engineering'\n"
-            "Output: Ritsuki had just escaped his trash life by getting into computer engineering.\n\n"
+            "Output: Ritsuki had just clawed his way out of a dead-end life by getting into computer engineering. For once, things were actually looking up for him.\n\n"
             "Visual Beat: A truck slamming into someone at night.\n"
             "Dialogue: (none)\n"
-            "Output: Then a truck ends that life in a second.\n\n"
+            "Output: And that's when Truck-kun cancels all of it in about two seconds. Of course. The one night his life turns around, it ends in the middle of the road.\n\n"
             "Visual Beat: The same guy waking up as a baby in a fantasy world.\n"
             "Dialogue: (none)\n"
-            "Output: He wakes up as Ian Raven — a black-haired baby whose peasant parents instantly know something is off.\n\n"
+            "Output: Then he wakes up as Ian Raven — a black-haired baby whose peasant parents instantly know something is off. His second life starts not with power, but with suspicion.\n\n"
             "=========================================\n"
             "YOUR TURN\n"
             "=========================================\n"
@@ -481,7 +487,7 @@ class Narrator:
             f"{continuity_section}\n"
             f"Visual Beat: {visual_beat if visual_beat else '(no image description available)'}\n"
             f"Dialogue: {key_dialogue if key_dialogue else '(none)'}\n\n"
-            "Output (1 sentence, max 25 words, match the example style above):"
+            "Output (2-4 sentences, 35-70 words, match the example style above):"
         )
 
         try:
@@ -515,7 +521,7 @@ class Narrator:
                     "options": {
                         "temperature": 0.78,
                         "top_p": 0.90,
-                        "num_predict": 90,
+                        "num_predict": 250,
                         "repeat_penalty": 1.20,
                     },
                 },
@@ -646,9 +652,9 @@ class Narrator:
             context_section += " ".join(recent)
 
         prompt = (
-            "You are a professional YouTube manhwa recap narrator. "
-            "You write in a gripping, third-person, present-tense voice — exactly like the best anime/manhwa recap channels on YouTube. "
-            "Your narration flows as one continuous story, not as isolated panel descriptions.\n\n"
+            "You narrate manhwa recap videos. Your #1 goal: sound like a person casually explaining the chapter "
+            "to a friend who hasn't read it — NOT like an AI describing images one by one. "
+            "Your narration flows as one continuous story, not as isolated descriptions.\n\n"
             f"{image_note}"
             f"{text_section}"
             f"{desc_section}"
@@ -656,18 +662,27 @@ class Narrator:
             f"{context_section}\n\n"
             "YOUR TASK: Continue the recap story with 2-4 sentences that cover what happens in the CURRENT PANEL. "
             "Seamlessly pick up from the previous narration. Do NOT re-summarise what already happened.\n\n"
-            "PROFESSIONAL RECAP STYLE RULES:\n"
-            "1. VOICE: Third-person, present tense, active voice. Sound like a narrator telling an exciting story to an audience — not describing an image.\n"
-            "2. FLOW: Your sentences must flow naturally from the previous narration. The full chapter should read as one unbroken story.\n"
-            "3. DRAMA & TENSION: Build suspense. Use short punchy sentences when tension peaks. Use vivid, cinematic language.\n"
-            "4. DIALOGUE: When a character speaks, weave their words into the narration naturally. Example: 'He raises his chin and declares, \"No matter how much you struggle, it\'s futile.\".\"'\n"
-            "5. CHARACTER NAMES: Use names when known. Never say 'Speaker 1', 'The character', or 'The man'. Describe unknown characters vividly ('the dark-eyed youth', 'the grinning veteran').\n"
-            "6. GENDER: Look at the panel. Default to male pronouns ('he/him') for ambiguous anime art styles.\n"
-            "7. NO META LANGUAGE: NEVER say 'In this panel', 'The image shows', 'We see', or 'This scene'.\n"
-            "8. NO PADDING: Do not start with filler like 'Meanwhile', 'Suddenly' every single time. Vary your sentence openers.\n"
-            "9. REFERENCE EXAMPLE STYLE (match this energy and prose quality):\n"
+            "STYLE RULES:\n"
+            "1. VOICE: Third-person, present tense, active voice. Natural spoken language — contractions are good. "
+            "You're a friend telling the story, not an audiobook narrator.\n"
+            "2. FLOW: Your sentences must flow naturally from the previous narration. Connect beats with transitions "
+            "('so', 'and that's when', 'meanwhile'). The full chapter should read as one unbroken story.\n"
+            "3. DON'T STATE THE OBVIOUS: the viewer can see the art. Add the context, motivation, and transitions "
+            "the images can't show — don't caption what's on screen.\n"
+            "4. PERSONALITY: You can react to absurd or funny moments like a friend would, as long as it never "
+            "buries the actual story information.\n"
+            "5. HOOK: If this is the first narration of the chapter, open with the most interesting twist or "
+            "question. Never start with 'This story begins' or 'Meet our protagonist'.\n"
+            "6. DIALOGUE: When a character speaks, weave their words into the narration naturally — paraphrase or "
+            "quote briefly, whichever sounds better spoken aloud.\n"
+            "7. CHARACTER NAMES: Use names when known. Never say 'Speaker 1' or 'The character'. For unknowns, "
+            "use simple references ('the guy', 'our MC', 'the silver-haired girl').\n"
+            "8. GENDER: Look at the image. Default to male pronouns ('he/him') for ambiguous art styles.\n"
+            "9. NO META LANGUAGE: NEVER say 'In this panel', 'The image shows', 'We see', or 'This scene'.\n"
+            "10. NO PADDING: Do not start with filler like 'Meanwhile', 'Suddenly' every single time. Vary your openers.\n"
+            "11. REFERENCE EXAMPLE STYLE (match this energy and prose quality):\n"
             "   'All the academy students are here for one thing — to level up by hunting low-level monsters. "
-            "And nobody expects much from him. After all, he\'s just a low-rank nobody everyone laughs at. "
+            "And nobody expects much from him. After all, he's just a low-rank nobody everyone laughs at. "
             "But what nobody knows is that his abilities have completely mutated.'\n\n"
             "Write ONLY the narration text. No labels, no explanations, no preamble.\n\n"
             "Continue the story now:"

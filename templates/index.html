@@ -3,12 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AniFlow - Automated Manhwa Video Creation</title>
-<meta name="description" content="AniFlow - Create manhwa and webtoon recap videos with AI-powered narration and automated processing">
-<link rel="stylesheet" href="/static/css/style.css?v=34">
+<title>AniFlow — Automated Manhwa Recap Studio</title>
+<meta name="description" content="AniFlow — Create manhwa and webtoon recap videos with AI-powered narration and a fully automated pipeline.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css?v=40">
 <link rel="icon" type="image/jpeg" href="/static/logo-small.jpg">
 </head>
 <body>
+
+<!-- Ambient background layers -->
+<div class="bg-aurora" aria-hidden="true"></div>
+<div class="bg-grid" aria-hidden="true"></div>
+<div id="bg3d" aria-hidden="true"></div>
+<div class="bg-vignette" aria-hidden="true"></div>
 
 <div class="app-container">
 
@@ -32,12 +41,39 @@
 
   <!-- ═══════════ VIEW: Home (Mode Selection) ═══════════ -->
   <div id="viewHome">
-    <h2 style="font-size:24px; font-weight:800; margin-bottom:4px;">Choose Your Recap Style</h2>
-    <p class="text-sm text-dim">Select a pipeline mode to get started</p>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge reveal">
+        <span class="hero-badge-pulse"></span>
+        AI-Powered Manhwa Recap Studio
+      </div>
+      <h1 class="hero-title reveal" style="--reveal-delay:.08s">
+        Turn chapters into<br>
+        <span class="hero-title-gradient">cinematic recaps.</span>
+      </h1>
+      <p class="hero-subtitle reveal" style="--reveal-delay:.16s">
+        Panel detection, dialogue extraction, AI narration, TTS, and video rendering —
+        one pipeline from raw pages to an upload-ready video.
+      </p>
+      <div class="hero-stats reveal" style="--reveal-delay:.24s">
+        <div class="hero-stat"><span class="hero-stat-num">9</span><span class="hero-stat-label">Pipeline stages</span></div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat"><span class="hero-stat-num">3</span><span class="hero-stat-label">AI backends</span></div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat"><span class="hero-stat-num">100%</span><span class="hero-stat-label">Local &amp; private</span></div>
+      </div>
+    </section>
+
+    <div class="section-heading reveal" style="--reveal-delay:.32s">
+      <h2>Choose your recap style</h2>
+      <p class="text-sm text-dim">Select a pipeline mode to get started</p>
+    </div>
 
     <div class="mode-selection">
       <!-- Dialogue Recap -->
-      <div class="mode-card" onclick="selectMode('dialogue')">
+      <div class="mode-card tilt" onclick="selectMode('dialogue')">
+        <div class="mode-card-shine"></div>
         <div class="mode-card-icon dialogue">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <rect x="9" y="2.5" width="6" height="11" rx="3" fill="#60a5fa"/>
@@ -59,10 +95,12 @@
           <span class="mode-step-tag">TTS</span>
           <span class="mode-step-tag">Video</span>
         </div>
+        <div class="mode-card-cta">Start building <span class="mode-card-arrow">→</span></div>
       </div>
 
       <!-- Narrated Recap -->
-      <div class="mode-card" onclick="selectMode('narrated')">
+      <div class="mode-card tilt" onclick="selectMode('narrated')">
+        <div class="mode-card-shine"></div>
         <div class="mode-card-icon narrated">
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <g transform="rotate(-8 12 7)">
@@ -77,7 +115,7 @@
         </div>
         <div class="mode-card-title">Narrated Recap</div>
         <div class="mode-card-desc">
-          Remove speech bubbles for clean panels. AI narrates the story in dramatic 3rd person.
+          Remove speech bubbles for clean panels. AI narrates the story like a friend recapping it for you.
           Supports Ollama (local), Gemini, or Claude for narration.
         </div>
         <div class="mode-card-steps">
@@ -91,6 +129,7 @@
           <span class="mode-step-tag">TTS</span>
           <span class="mode-step-tag">Video</span>
         </div>
+        <div class="mode-card-cta">Start building <span class="mode-card-arrow">→</span></div>
       </div>
     </div>
 
@@ -135,7 +174,9 @@
 
 <!-- SocketIO -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="/static/js/app.js?v=39"></script>
+<script src="/static/js/app.js?v=40"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" defer></script>
+<script src="/static/js/effects.js?v=1" defer></script>
 
 </body>
 </html>

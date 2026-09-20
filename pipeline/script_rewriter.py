@@ -34,12 +34,15 @@ class ScriptRewriter:
                 config.REWRITER_STYLES["dramatic"]
             )
 
-        system_prompt = """You are a professional script rewriter for manhwa/webtoon recap videos.
-You will receive a narration and rewrite it according to the given style instructions.
+        system_prompt = """You are a script rewriter for manhwa/webtoon recap videos.
+You will receive a narration line and rewrite it according to the given style instructions.
+The end goal: narration that sounds like a person casually explaining the chapter to a friend — not an AI describing images.
 Rules:
-- Keep it the same length (2-4 sentences)
+- Keep it the same length (1-2 short sentences)
 - Maintain the core story events and meaning
 - Never add information not in the original
+- It must read as a continuation of an ongoing story, not a standalone caption
+- Never mention panels, images, or artwork
 - Write ONLY the rewritten narration, nothing else
 - No meta commentary, no quotation marks wrapping the text"""
 

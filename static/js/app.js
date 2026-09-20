@@ -3063,17 +3063,18 @@ function renderNarrateStep() {
 }
 
 function renderOllamaSettings() {
-  const savedModel = localStorage.getItem('ollamaNarrateModel') || 'qwen2.5vl:7b';
+  const savedModel = localStorage.getItem('ollamaNarrateModel') || 'gemma3:27b';
   document.getElementById('aiBackendSettings').innerHTML = `
     <div class="form-group">
       <label class="form-label">Ollama Model (the writer)</label>
       <select class="form-select" id="settingOllamaModel">
-        <option value="qwen2.5vl:7b">qwen2.5vl:7b (recommended — sees the panel + cast faces)</option>
-        <option value="qwen2.5:14b">qwen2.5:14b (text-only, no images)</option>
+        <option value="gemma3:27b">gemma3:27b (recommended — best narration quality, runs locally)</option>
+        <option value="qwen2.5vl:7b">qwen2.5vl:7b (vision — sees the panel + cast faces)</option>
+        <option value="qwen2.5:14b">qwen2.5:14b (text-only, lighter than 27b)</option>
         <option value="qwen2.5vl:3b">qwen2.5vl:3b (fastest vision)</option>
       </select>
     </div>
-    <div class="text-xs text-dim">Runs 100% on your machine via Ollama. The vision parser (qwen2.5vl:3b) reads the panel, then the writer model drafts the recap line.</div>`;
+    <div class="text-xs text-dim">Runs 100% on your machine via Ollama. The vision parser (qwen2.5vl:3b) reads the panel, then the writer model drafts the recap line. Pull the writer first: <code>ollama pull gemma3:27b</code></div>`;
   const sel = document.getElementById('settingOllamaModel');
   if ([...sel.options].some(o => o.value === savedModel)) sel.value = savedModel;
 }

@@ -36,7 +36,7 @@ FALLBACK_MODEL = "qwen2.5vl:7b"
 
 # Bump when the narration prompt changes meaningfully — cached narrations made
 # with an older prompt are treated as stale and get regenerated on re-run.
-NARRATION_PROMPT_VERSION = 5
+NARRATION_PROMPT_VERSION = 6
 
 
 class Narrator:
@@ -454,8 +454,11 @@ class Narrator:
             "'dude' or winks at the audience. The viewer can SEE the art; your narration is the "
             "story being told.\n\n"
             "RULES:\n"
-            "1. Write 2-4 sentences for this beat (roughly 35-70 words). Tell the story fully — "
-            "emotion, motivation, stakes, why it matters. Never a single throwaway line.\n"
+            "1. This recap moves through HUNDREDS of panels — you get ONE line of voice-over per "
+            "panel. Write ONE sentence (two very short ones at most), 15-25 words total. Pick the "
+            "single most important thing this beat adds — emotion, motivation, or stakes — and say "
+            "only that. If it doesn't fit, cut content, never words. No padding, no description "
+            "that repeats the sentence you just wrote.\n"
             "2. NEVER describe what's visually obvious. Narrate the inner story — what the "
             "character feels, decides, risks — not what the drawing shows.\n"
             "3. FLOW: your line continues the previous narration as ONE unbroken story. Use "
@@ -474,33 +477,26 @@ class Narrator:
             "10. Match the rhythm to the moment: quiet scenes get gentle lines; turning points "
             "get a short punch.\n\n"
             "=========================================\n"
-            "TONE EXAMPLES (this is the voice — dramatic, sincere, immersive)\n"
+            "TONE EXAMPLES (this is the voice — dramatic, sincere, ONE short line per panel)\n"
             "=========================================\n"
             "Visual Beat: Guy holding a sealed love letter at his desk.\n"
             "Dialogue: 'This love letter... a whole semester in the making.'\n"
-            "Output: For an entire semester, one letter has been waiting at the bottom of his bag — "
-            "every word rewritten until it felt perfect. And now, at last, he's ready to hand it over.\n\n"
+            "Output: One letter, rewritten all semester — and today he finally hands it over.\n\n"
             "Visual Beat: Same guy turns around in class, letter in hand.\n"
             "Dialogue: 'Today I'm gonna give it to her.'\n"
-            "Output: His heart is pounding as he turns around in his seat. Today is the day he tells "
-            "her — no more rehearsals, no more second-guessing himself.\n\n"
+            "Output: His heart is pounding. No more rehearsals — he tells her today.\n\n"
             "Visual Beat: A girl sits by the window, sneaking glances at him.\n"
             "Dialogue: 'Because she occasionally peeks at me.'\n"
-            "Output: And he has proof. Across the classroom, she keeps stealing glances at him — "
-            "each one quietly convincing him that today might actually change everything.\n\n"
+            "Output: And he has proof: across the room, she keeps stealing glances at him.\n\n"
             "Visual Beat: Phone screen showing a university admission result.\n"
             "Dialogue: 'computer engineering'\n"
-            "Output: Ritsuki had clawed his way out of a life with no promises the day the admission "
-            "notice for computer engineering lit up his screen. For the first time, the future looked "
-            "like it was finally on his side.\n\n"
+            "Output: Ritsuki clawed his way out of nothing the day that admission notice lit up his screen.\n\n"
             "Visual Beat: A truck slamming into someone at night.\n"
             "Dialogue: (none)\n"
-            "Output: He never made it home. One instant of headlights and screeching brakes, and the "
-            "life he had just started to love was over — right there in the middle of the road.\n\n"
+            "Output: He never made it home. One instant of headlights, and it was over.\n\n"
             "Visual Beat: The same guy waking up as a baby in a fantasy world.\n"
             "Dialogue: (none)\n"
-            "Output: Then his eyes opened again — as a newborn, in a world he did not recognize. His "
-            "second life did not begin with power. It began with the wary stare of his new parents.\n\n"
+            "Output: Then his eyes opened again — as a newborn, in a world he did not recognize.\n\n"
             "=========================================\n"
             "YOUR TURN\n"
             "=========================================\n"
@@ -508,7 +504,7 @@ class Narrator:
             f"{continuity_section}\n"
             f"Visual Beat: {visual_beat if visual_beat else '(no image description available)'}\n"
             f"Dialogue: {key_dialogue if key_dialogue else '(none)'}\n\n"
-            "Output (2-4 sentences, 35-70 words, plain text, match the example voice above):"
+            "Output (ONE short sentence, 15-25 words, plain text, match the example voice above):"
         )
 
         try:
@@ -569,7 +565,9 @@ class Narrator:
                     "options": {
                         "temperature": temp,
                         "top_p": 0.90,
-                        "num_predict": 250,
+                        # 15-25 word target with headroom — a hard cap so the
+                        # model physically cannot run long on a single panel.
+                        "num_predict": 90,
                         "repeat_penalty": 1.20,
                     },
                 },
@@ -723,7 +721,9 @@ class Narrator:
             f"{desc_section}"
             f"{cast_section}"
             f"{context_section}\n\n"
-            "YOUR TASK: Continue the recap story with 2-4 sentences that cover what happens in the CURRENT PANEL. "
+            "YOUR TASK: Add ONE short line of narration (15-25 words, two very short sentences at "
+            "most) covering the CURRENT PANEL. This recap moves through hundreds of panels, so keep "
+            "it to the single most important thing this beat adds. "
             "Seamlessly pick up from the previous narration. Do NOT re-summarise what already happened.\n\n"
             "STYLE RULES:\n"
             "1. VOICE: Third-person, present tense, active voice. Natural spoken language — contractions are good. "
@@ -743,9 +743,8 @@ class Narrator:
             "8. GENDER: Look at the image. Default to male pronouns ('he/him') for ambiguous art styles.\n"
             "9. NO META LANGUAGE: NEVER say 'In this panel', 'The image shows', 'We see', or 'This scene'.\n"
             "10. NO PADDING: Do not start with filler like 'Meanwhile', 'Suddenly' every single time. Vary your openers.\n"
-            "11. REFERENCE EXAMPLE STYLE (match this energy and prose quality):\n"
-            "   'All the academy students are here for one thing — to level up by hunting low-level monsters. "
-            "And nobody expects much from him. After all, he's just a low-rank nobody everyone laughs at. "
+            "11. REFERENCE EXAMPLE STYLE (match this energy — but half the length):\n"
+            "   'And nobody expects much from him — just a low-rank nobody everyone laughs at. "
             "But what nobody knows is that his abilities have completely mutated.'\n\n"
             "Write ONLY the narration text. No labels, no explanations, no preamble.\n\n"
             "Continue the story now:"
@@ -767,7 +766,7 @@ class Narrator:
                     "options": {
                         "temperature": 0.82,
                         "top_p": 0.92,
-                        "num_predict": 220,
+                        "num_predict": 90,
                     },
                 },
                 timeout=config.OLLAMA_TIMEOUT,
@@ -790,7 +789,7 @@ class Narrator:
                         "options": {
                             "temperature": 0.82,
                             "top_p": 0.92,
-                            "num_predict": 220,
+                            "num_predict": 90,
                         },
                     },
                     timeout=config.OLLAMA_TIMEOUT,
@@ -907,7 +906,41 @@ class Narrator:
         result = result.replace('*', '')
         if result.startswith('"') and result.endswith('"'):
             result = result[1:-1]
-        return result.strip()
+        return self._trim_narration(result.strip())
+
+    @staticmethod
+    def _trim_narration(text: str, max_words: int = 30) -> str:
+        """Recap pacing: one panel gets one short line, even if the model rambles.
+
+        Drops trailing sentences until the line fits the budget; if a single
+        sentence is still over, cut it at the last clause break before the
+        limit. Never touches bracketed failure markers.
+        """
+        if not text or text.startswith('['):
+            return text
+        words = text.split()
+        if len(words) <= max_words:
+            return text
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        out = []
+        count = 0
+        for s in sentences:
+            c = len(s.split())
+            if out and count + c > max_words:
+                break
+            out.append(s)
+            count += c
+        result = ' '.join(out).strip()
+        if count > max_words and len(out) == 1:
+            head = ' '.join(words[:max_words])
+            for sep in (' — ', ' – ', ', ', '; '):
+                cut = head.rfind(sep)
+                if cut > max_words * 3:
+                    result = head[:cut].rstrip(',;') + '.'
+                    break
+            else:
+                result = head.rstrip(',-—–') + '.'
+        return result
 
     def _save_narrations(self, panels: list[dict], filepath: str):
         """Save narrations to JSON."""

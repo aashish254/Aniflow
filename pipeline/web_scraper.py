@@ -471,7 +471,31 @@ def _extract_manga_slug(url):
     return parts[-1] if parts else "unknown"
 
 
-def analyze_url(url):
+_CHAPTER_SEGMENT_RE = re.compile(
+    r'^(?:ch(?:ap(?:ter)?)?|ep(?:isode)?|c)[.\s_-]*\d+(?:\.\d+)?$', re.IGNORECASE
+)
+
+
+def _parent_series_url(url):
+    """If the URL points at a chapter/reader page, return the parent series URL.
+
+    Users often paste the page they are actually reading
+    (.../nan-hao-shang-feng/chap-1/) instead of the series listing
+    (.../nan-hao-shang-feng/). A reader page has no chapter list to scrape, so
+    we climb one path segment when the last segment looks like a chapter.
+    Returns None when the URL already looks like a series page.
+    """
+    parsed = urlparse(url)
+    segments = [s for s in parsed.path.split('/') if s]
+    if len(segments) < 2:
+        return None
+    if not _CHAPTER_SEGMENT_RE.match(segments[-1]):
+        return None
+    parent_path = '/' + '/'.join(segments[:-1])
+    return f"{parsed.scheme}://{parsed.netloc}{parent_path}"
+
+
+def analyze_url(url, _depth=0):
     """
     Analyze a manga URL and return chapter list.
     Supports MangaDex (via API) and generic scraping sites.
@@ -623,7 +647,22 @@ def analyze_url(url):
     result['total_chapters'] = len(unique_chapters)
 
     if not unique_chapters:
-        result['error'] = "No chapters found. The site may use JavaScript rendering."
+        # The pasted URL may be a chapter/reader page rather than the series
+        # listing. Climb to the parent series URL and retry once before giving
+        # up, so a reader URL like .../title/chap-1/ still resolves.
+        if _depth == 0:
+            parent = _parent_series_url(url)
+            if parent:
+                print(f"[Scraper] No chapters on {url} — retrying parent series {parent}")
+                parent_result = analyze_url(parent, _depth=1)
+                if parent_result.get('chapters'):
+                    return parent_result
+        if _depth == 0:
+            result['error'] = (
+                "No chapters found on this page. If you pasted a single-chapter "
+                "reading URL, use the manga's main/series page URL instead "
+                "(e.g. https://site/manga/title/ without the chapter part)."
+            )
 
     return result
 

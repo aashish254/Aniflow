@@ -3,153 +3,172 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AniFlow — Automated Manhwa Recap Studio</title>
-<meta name="description" content="AniFlow — Create manhwa and webtoon recap videos with AI-powered narration and a fully automated pipeline.">
+<meta name="theme-color" content="#E3E5E1">
+<title>AniFlow — Manhwa Recap Studio</title>
+<meta name="description" content="AniFlow — Turn manhwa and webtoon chapters into recap videos with AI narration. Runs entirely on your machine.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/style.css?v=40">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,weight@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css?v=51">
 <link rel="icon" type="image/jpeg" href="/static/logo-small.jpg">
 </head>
 <body>
-
-<!-- Ambient background layers -->
-<div class="bg-aurora" aria-hidden="true"></div>
-<div class="bg-grid" aria-hidden="true"></div>
-<div id="bg3d" aria-hidden="true"></div>
-<div class="bg-vignette" aria-hidden="true"></div>
 
 <div class="app-container">
 
   <!-- ═══════════ Header ═══════════ -->
   <header class="app-header">
     <div class="app-logo">
-      <img src="/static/logo-small.jpg?v=2" alt="AniFlow logo"
-           onerror="if (!this.dataset.fallback) { this.dataset.fallback = 1; this.src = '/static/logo-small.png?v=2'; }"
-           style="width: 42px; height: 42px; border-radius: 10px; object-fit: cover; display: block; border: 1.5px solid rgba(255,255,255,0.22); box-shadow: 0 0 0 2px rgba(139,92,246,0.25), 0 2px 10px rgba(0,0,0,0.45);">
-      <div>
-        <span class="app-logo-text">AniFlow</span>
-        <span class="app-logo-ver">v2</span>
-      </div>
+      <img src="/static/logo-small.jpg?v=2" alt="AniFlow logo" width="38" height="38"
+           onerror="if (!this.dataset.fallback) { this.dataset.fallback = 1; this.src = '/static/logo-small.png?v=2'; }">
+      <span class="app-logo-text">AniFlow</span>
+      <span class="app-logo-ver">v2</span>
     </div>
-    <div class="header-status">
+    <div class="header-status" aria-label="Service status">
       <div class="status-dot"><div class="dot" id="dotOllama"></div> Ollama</div>
       <div class="status-dot"><div class="dot" id="dotFFmpeg"></div> FFmpeg</div>
       <div class="status-dot"><div class="dot" id="dotTTS"></div> TTS</div>
     </div>
   </header>
 
-  <!-- ═══════════ VIEW: Home (Mode Selection) ═══════════ -->
-  <div id="viewHome">
+  <!-- ═══════════ VIEW: Home (the strip) ═══════════ -->
+  <div id="viewHome" class="strip">
 
-    <!-- Hero -->
-    <section class="hero">
-      <div class="hero-badge reveal">
-        <span class="hero-badge-pulse"></span>
-        AI-Powered Manhwa Recap Studio
+    <!-- Panel 1 · Title card -->
+    <section class="panel panel-title">
+      <div class="panel-title-copy">
+        <div class="bubble-badge">Runs entirely on your machine</div>
+        <h1 class="hero-title">Pages in.<br>Recaps out.</h1>
+        <p class="hero-subtitle">
+          Panel detection, dialogue extraction, AI narration, voiceover and render —
+          one vertical strip from raw chapters to an upload-ready video.
+        </p>
       </div>
-      <h1 class="hero-title reveal" style="--reveal-delay:.08s">
-        Turn chapters into<br>
-        <span class="hero-title-gradient">cinematic recaps.</span>
-      </h1>
-      <p class="hero-subtitle reveal" style="--reveal-delay:.16s">
-        Panel detection, dialogue extraction, AI narration, TTS, and video rendering —
-        one pipeline from raw pages to an upload-ready video.
-      </p>
-      <div class="hero-stats reveal" style="--reveal-delay:.24s">
-        <div class="hero-stat"><span class="hero-stat-num">9</span><span class="hero-stat-label">Pipeline stages</span></div>
-        <div class="hero-stat-divider"></div>
-        <div class="hero-stat"><span class="hero-stat-num">3</span><span class="hero-stat-label">AI backends</span></div>
-        <div class="hero-stat-divider"></div>
-        <div class="hero-stat"><span class="hero-stat-num">100%</span><span class="hero-stat-label">Local &amp; private</span></div>
+      <div class="panel-title-art" aria-hidden="true">
+        <!-- Abstract webtoon strip: inked mini-panels, halftone, speech bubble, speed lines -->
+        <svg viewBox="0 0 220 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="presentation">
+          <defs>
+            <pattern id="halftone" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+              <circle cx="4" cy="4" r="1.7" fill="#1B1C1F" opacity="0.35"/>
+            </pattern>
+            <pattern id="halftone-blue" x="0" y="0" width="7" height="7" patternUnits="userSpaceOnUse">
+              <circle cx="3.5" cy="3.5" r="1.6" fill="#1F4FD8" opacity="0.5"/>
+            </pattern>
+          </defs>
+          <!-- top panel: sky with halftone + burst -->
+          <rect x="8" y="8" width="204" height="96" rx="4" fill="#FFFFFF" stroke="#1B1C1F" stroke-width="2.5"/>
+          <rect x="10" y="10" width="200" height="92" rx="3" fill="url(#halftone-blue)"/>
+          <g stroke="#1B1C1F" stroke-width="2.5" stroke-linecap="round">
+            <path d="M110 108 L110 86"/><path d="M110 108 L88 92"/><path d="M110 108 L132 92"/>
+            <path d="M110 108 L70 100"/><path d="M110 108 L150 100"/>
+          </g>
+          <circle cx="110" cy="112" r="10" fill="#D7263D" stroke="#1B1C1F" stroke-width="2.5"/>
+          <!-- middle panel: speech bubble -->
+          <rect x="8" y="116" width="204" height="96" rx="4" fill="#FFFFFF" stroke="#1B1C1F" stroke-width="2.5"/>
+          <path d="M46 138 h104 a10 10 0 0 1 10 10 v34 a10 10 0 0 1 -10 10 h-58 l-16 16 v-16 h-30 a10 10 0 0 1 -10 -10 v-34 a10 10 0 0 1 10 -10 z"
+                fill="#FFFFFF" stroke="#1B1C1F" stroke-width="2.5" transform="translate(0,-6)"/>
+          <rect x="60" y="152" width="76" height="6" rx="3" fill="#1B1C1F"/>
+          <rect x="60" y="166" width="52" height="6" rx="3" fill="#1B1C1F" opacity="0.55"/>
+          <rect x="170" y="186" width="26" height="14" rx="2" fill="url(#halftone)"/>
+          <!-- bottom panel: motion lines + star -->
+          <rect x="8" y="224" width="204" height="88" rx="4" fill="#FFFFFF" stroke="#1B1C1F" stroke-width="2.5"/>
+          <g stroke="#1B1C1F" stroke-width="2.5" stroke-linecap="round">
+            <path d="M28 244 h58"/><path d="M28 260 h88"/><path d="M28 276 h44"/>
+          </g>
+          <path d="M164 236 l7 18 19 2 -14 13 4 19 -16 -10 -16 10 4 -19 -14 -13 19 -2 z"
+                fill="#1F4FD8" stroke="#1B1C1F" stroke-width="2.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="panel-halftone" aria-hidden="true"></div>
+    </section>
+
+    <!-- Panel 2 · Mode selection -->
+    <section class="panel panel-modes">
+      <h2 class="panel-heading">Pick how the story is told</h2>
+      <div class="mode-selection">
+        <!-- Dialogue Recap -->
+        <div class="mode-card" onclick="selectMode('dialogue')" role="button" tabindex="0"
+             onkeydown="if (event.key==='Enter'||event.key===' ') { event.preventDefault(); selectMode('dialogue'); }">
+          <div class="mode-card-icon dialogue">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="9" y="2.5" width="6" height="11" rx="3" fill="#1F4FD8"/>
+              <path d="M5.5 11a6.5 6.5 0 0 0 13 0" stroke="#1F4FD8" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 17.5V21M8.5 21h7" stroke="#1F4FD8" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mode-card-title">Dialogue recap</div>
+          <div class="mode-card-desc">
+            Keep speech bubbles visible. Extract dialogue text from panels and convert
+            it directly to audio — let the original lines speak for themselves.
+          </div>
+          <div class="mode-card-steps">
+            <span class="mode-step-tag">Load</span>
+            <span class="mode-step-tag">Stitch</span>
+            <span class="mode-step-tag">Detect</span>
+            <span class="mode-step-tag">Crop</span>
+            <span class="mode-step-tag">Extract text</span>
+            <span class="mode-step-tag">TTS</span>
+            <span class="mode-step-tag">Video</span>
+          </div>
+          <div class="mode-card-cta">Start building</div>
+        </div>
+
+        <!-- Narrated Recap -->
+        <div class="mode-card" onclick="selectMode('narrated')" role="button" tabindex="0"
+             onkeydown="if (event.key==='Enter'||event.key===' ') { event.preventDefault(); selectMode('narrated'); }">
+          <div class="mode-card-icon narrated">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <g transform="rotate(-8 12 7)">
+                <rect x="2" y="4.8" width="20" height="4.4" rx="1" fill="#D7263D"/>
+                <rect x="5" y="4.8" width="2.6" height="4.4" fill="#FFFFFF"/>
+                <rect x="10" y="4.8" width="2.6" height="4.4" fill="#FFFFFF"/>
+                <rect x="15" y="4.8" width="2.6" height="4.4" fill="#FFFFFF"/>
+              </g>
+              <rect x="2" y="11" width="20" height="10" rx="2" fill="#D7263D"/>
+              <path d="M10 13.8l5.2 2.2-5.2 2.2z" fill="#FFFFFF"/>
+            </svg>
+          </div>
+          <div class="mode-card-title">Narrated recap</div>
+          <div class="mode-card-desc">
+            Remove speech bubbles for clean panels. AI narrates the story like a friend
+            recapping it for you — with Ollama, Gemini, or Claude.
+          </div>
+          <div class="mode-card-steps">
+            <span class="mode-step-tag">Load</span>
+            <span class="mode-step-tag">Stitch</span>
+            <span class="mode-step-tag">Detect</span>
+            <span class="mode-step-tag">Crop</span>
+            <span class="mode-step-tag">Extract</span>
+            <span class="mode-step-tag">Clean</span>
+            <span class="mode-step-tag">Narrate</span>
+            <span class="mode-step-tag">TTS</span>
+            <span class="mode-step-tag">Video</span>
+          </div>
+          <div class="mode-card-cta">Start building</div>
+        </div>
       </div>
     </section>
 
-    <div class="section-heading reveal" style="--reveal-delay:.32s">
-      <h2>Choose your recap style</h2>
-      <p class="text-sm text-dim">Select a pipeline mode to get started</p>
-    </div>
-
-    <div class="mode-selection">
-      <!-- Dialogue Recap -->
-      <div class="mode-card tilt" onclick="selectMode('dialogue')">
-        <div class="mode-card-shine"></div>
-        <div class="mode-card-icon dialogue">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect x="9" y="2.5" width="6" height="11" rx="3" fill="#60a5fa"/>
-            <path d="M5.5 11a6.5 6.5 0 0 0 13 0" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
-            <path d="M12 17.5V21M8.5 21h7" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
-          </svg>
+    <!-- Panel 3 · Recent projects -->
+    <section class="panel panel-projects">
+      <h2 class="panel-heading">Recent projects</h2>
+      <div class="projects-grid" id="projectsGrid">
+        <div class="empty-state" style="grid-column:1/-1">
+          <div class="empty-state-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="#1B1C1F" stroke-width="1.6" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="empty-state-text">Nothing on the desk yet. Pick a style above and start your first strip.</div>
         </div>
-        <div class="mode-card-title">Dialogue Recap</div>
-        <div class="mode-card-desc">
-          Keep speech bubbles visible. Extract dialogue text from panels and convert directly to audio.
-          Perfect for letting the original dialogue speak for itself.
-        </div>
-        <div class="mode-card-steps">
-          <span class="mode-step-tag">Load</span>
-          <span class="mode-step-tag">Stitch</span>
-          <span class="mode-step-tag">Detect</span>
-          <span class="mode-step-tag">Crop</span>
-          <span class="mode-step-tag">Extract Text</span>
-          <span class="mode-step-tag">TTS</span>
-          <span class="mode-step-tag">Video</span>
-        </div>
-        <div class="mode-card-cta">Start building <span class="mode-card-arrow">→</span></div>
       </div>
+    </section>
 
-      <!-- Narrated Recap -->
-      <div class="mode-card tilt" onclick="selectMode('narrated')">
-        <div class="mode-card-shine"></div>
-        <div class="mode-card-icon narrated">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <g transform="rotate(-8 12 7)">
-              <rect x="2" y="4.8" width="20" height="4.4" rx="1" fill="#a78bfa"/>
-              <rect x="5" y="4.8" width="2.6" height="4.4" fill="#0b0d12"/>
-              <rect x="10" y="4.8" width="2.6" height="4.4" fill="#0b0d12"/>
-              <rect x="15" y="4.8" width="2.6" height="4.4" fill="#0b0d12"/>
-            </g>
-            <rect x="2" y="11" width="20" height="10" rx="2" fill="#a78bfa"/>
-            <path d="M10 13.8l5.2 2.2-5.2 2.2z" fill="#0b0d12"/>
-          </svg>
-        </div>
-        <div class="mode-card-title">Narrated Recap</div>
-        <div class="mode-card-desc">
-          Remove speech bubbles for clean panels. AI narrates the story like a friend recapping it for you.
-          Supports Ollama (local), Gemini, or Claude for narration.
-        </div>
-        <div class="mode-card-steps">
-          <span class="mode-step-tag">Load</span>
-          <span class="mode-step-tag">Stitch</span>
-          <span class="mode-step-tag">Detect</span>
-          <span class="mode-step-tag">Crop</span>
-          <span class="mode-step-tag">Extract</span>
-          <span class="mode-step-tag">Clean</span>
-          <span class="mode-step-tag">Narrate</span>
-          <span class="mode-step-tag">TTS</span>
-          <span class="mode-step-tag">Video</span>
-        </div>
-        <div class="mode-card-cta">Start building <span class="mode-card-arrow">→</span></div>
-      </div>
-    </div>
-
-    <!-- Recent Projects -->
-    <div class="section-label">Recent Projects</div>
-    <div class="projects-grid" id="projectsGrid">
-      <div class="empty-state" style="grid-column:1/-1">
-        <div class="empty-state-icon">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="1.4"/>
-          </svg>
-        </div>
-        <div class="empty-state-text">No projects yet. Select a mode above to start creating.</div>
-      </div>
-    </div>
   </div>
 
   <!-- ═══════════ VIEW: Wizard ═══════════ -->
   <div id="viewWizard" class="hidden">
-    <div class="back-link" onclick="goHome()">← Back to Home</div>
+    <button class="back-link" type="button" onclick="goHome()">Back to home</button>
 
     <!-- Step Indicator -->
     <div class="step-indicator" id="stepIndicator"></div>
@@ -174,9 +193,7 @@
 
 <!-- SocketIO -->
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-<script src="/static/js/app.js?v=40"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" defer></script>
-<script src="/static/js/effects.js?v=1" defer></script>
+<script src="/static/js/app.js?v=50"></script>
 
 </body>
 </html>

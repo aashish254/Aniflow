@@ -129,19 +129,19 @@ function renderBatchDashboard(projects) {
           <div class="project-card-name" style="margin-bottom:4px;">📘 ${esc(p.display_name)}</div>
           <div class="project-card-meta" style="margin-bottom:8px;">
             ${p.total} chapter${p.total > 1 ? 's' : ''} · ${p.with_images} downloaded · ${ready} fully rendered
-            ${failed.length ? ` · <span style="color:#f87171;">${failed.length} with errors</span>` : ''}
+            ${failed.length ? ` · <span style="color:var(--color-error); font-weight:600;">${failed.length} with errors</span>` : ''}
           </div>
           <div style="margin-bottom:10px;">${chips}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-secondary" style="padding:6px 14px; font-size:12px;" onclick="openBatchProject('${esc(p.name)}')">📂 Open</button>
-            <button class="btn" style="padding:6px 14px; font-size:12px; background:linear-gradient(135deg,#facc15,#f59e0b); color:#111; font-weight:700;" onclick="runFullBatchForProject('${esc(p.name)}')">🚀 Run Full Batch</button>
-            <button class="btn btn-secondary" style="padding:6px 14px; font-size:12px; color:#f87171; border-color:rgba(248,113,113,0.4);" onclick="confirmDeleteProject('${esc(p.name)}')" title="Delete this project and all its files">🗑️ Delete</button>
+            <button class="btn btn-primary" style="padding:6px 14px; font-size:12px;" onclick="runFullBatchForProject('${esc(p.name)}')">🚀 Run Full Batch</button>
+            <button class="btn btn-secondary" style="padding:6px 14px; font-size:12px; color:var(--color-error); border-color:var(--color-error);" onclick="confirmDeleteProject('${esc(p.name)}')" title="Delete this project and all its files">🗑️ Delete</button>
           </div>
         </div>
       </div>
     </div>`;
   }).join('');
-  grid.innerHTML = cards + grid.innerHTML;
+  grid.innerHTML = cards + (grid.querySelector('.empty-state') ? '' : grid.innerHTML);
 }
 
 async function openBatchProject(name) {
@@ -169,15 +169,15 @@ function confirmDeleteProject(name) {
     <p style="font-size:14px; margin-bottom:10px;">
       Are you sure you want to permanently delete <strong>${esc(displayName)}</strong>?
     </p>
-    <p style="font-size:13px; color:rgba(255,255,255,0.65); line-height:1.6;">
+    <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
       This wipes <strong>everything</strong> related to it:
       all ${total} chapter folder(s) of downloaded images, stitched strips,
       detected panels, cropped panels, extracted text, audio and video clips.
-      <strong style="color:#f87171;">This cannot be undone.</strong>
+      <strong style="color:var(--color-error);">This cannot be undone.</strong>
     </p>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-    <button class="btn" style="background:#ef4444; color:#fff; font-weight:700;" onclick="deleteProjectConfirmed('${esc(name)}')">🗑️ Yes, delete everything</button>
+    <button class="btn btn-danger" style="font-weight:700;" onclick="deleteProjectConfirmed('${esc(name)}')">🗑️ Yes, delete everything</button>
   `);
 }
 
@@ -203,8 +203,12 @@ function renderProjects(projects) {
   if (!projects || projects.length === 0) {
     grid.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
-        <div class="empty-state-icon">📂</div>
-        <div class="empty-state-text">No projects yet. Select a mode above to start creating.</div>
+        <div class="empty-state-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="#1B1C1F" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="empty-state-text">Nothing on the desk yet. Pick a style above and start your first strip.</div>
       </div>`;
     return;
   }
@@ -339,7 +343,7 @@ function renderSourceStep() {
     </div>
 
     <div class="divider" style="position:relative; text-align:center;">
-      <span style="background:var(--bg-card); padding:0 12px; position:relative; z-index:1; color:var(--text-dim); font-size:12px; font-weight:600;">OR USE LOCAL FOLDER</span>
+      <span style="background:var(--bg-card); padding:0 12px; position:relative; z-index:1; color:var(--text-dim); font-size:12px; font-weight:600;">Or use a local folder</span>
     </div>
 
     <div class="form-group" style="margin-top:16px;">
@@ -349,28 +353,28 @@ function renderSourceStep() {
     </div>
     
     <!-- BATCH MODE TOGGLE -->
-    <div class="form-group" style="margin-top:20px; padding:16px; background:rgba(59, 130, 246, 0.1); border:2px solid rgba(59, 130, 246, 0.3); border-radius:12px;">
+    <div class="form-group" style="margin-top:20px; padding:16px; background:var(--blue-tint); border:2px solid var(--blue); border-radius:8px;">
       <label class="form-label" style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
         <span style="font-size:16px;">🔄</span>
         <span style="font-weight:700;">Processing Mode</span>
       </label>
-      <div style="display:flex; gap:12px; align-items:center;">
-        <label class="radio-option" style="flex:1; cursor:pointer; padding:12px; border:2px solid rgba(255,255,255,0.1); border-radius:8px; transition:all 0.2s;" onclick="setBatchMode(false)">
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <label class="radio-option" style="flex:1; cursor:pointer; padding:12px; border-radius:6px;" onclick="setBatchMode(false)">
           <input type="radio" name="batchMode" value="single" checked style="margin-right:8px;">
           <div style="display:inline-block;">
             <strong>📄 Single Chapter</strong>
-            <div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:2px;">Process one chapter at a time</div>
+            <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">Process one chapter at a time</div>
           </div>
         </label>
-        <label class="radio-option" style="flex:1; cursor:pointer; padding:12px; border:2px solid rgba(255,255,255,0.1); border-radius:8px; transition:all 0.2s;" onclick="setBatchMode(true)">
+        <label class="radio-option" style="flex:1; cursor:pointer; padding:12px; border-radius:6px;" onclick="setBatchMode(true)">
           <input type="radio" name="batchMode" value="batch" style="margin-right:8px;">
           <div style="display:inline-block;">
             <strong>📚 Batch Mode</strong>
-            <div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:2px;">Process multiple chapters at once</div>
+            <div style="font-size:11px; color:var(--text-dim); margin-top:2px;">Process multiple chapters at once</div>
           </div>
         </label>
       </div>
-      <div id="batchModeHint" style="margin-top:12px; padding:10px; background:rgba(59, 130, 246, 0.15); border-radius:6px; font-size:12px; color:rgba(255,255,255,0.8); display:none;">
+      <div id="batchModeHint" style="margin-top:12px; padding:10px; background:var(--paper); border:1.5px solid var(--blue); border-radius:6px; font-size:12px; color:var(--ink); display:none;">
         💡 <strong>Batch Mode:</strong> Download multiple chapters (e.g., 1-5) and process them all together. You'll be able to switch between chapters to review each one's results.
       </div>
     </div>
@@ -455,7 +459,7 @@ function renderSourceStep() {
           <label class="form-label">Background Color & Opacity</label>
           <div style="display:flex; gap:10px; align-items:center;">
             <input type="color" id="settingBgColor" value="#0a0a0f" style="width:44px; height:36px; border:none; background:none; cursor:pointer; padding:0;">
-            <input type="range" id="settingBgOpacity" min="0" max="100" value="50" style="flex:1; accent-color:#facc15;" oninput="document.getElementById('bgOpacityVal').textContent = this.value + '%'">
+            <input type="range" id="settingBgOpacity" min="0" max="100" value="50" style="flex:1; accent-color:var(--amber);" oninput="document.getElementById('bgOpacityVal').textContent = this.value + '%'">
             <span id="bgOpacityVal" class="text-xs text-dim" style="width:40px;">50%</span>
           </div>
         </div>
@@ -484,14 +488,14 @@ function renderSourceStep() {
         </div>
         <div class="form-group" style="grid-column: 1 / -1;">
           <label class="form-label">⚡ Speed Mode</label>
-          <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; background:rgba(250,204,21,0.08); border:1px solid rgba(250,204,21,0.25); border-radius:8px; cursor:pointer;">
-            <input type="checkbox" id="settingSpeedMode" ${localStorage.getItem('speedMode') === 'true' ? 'checked' : ''} onchange="toggleSpeedOptions(this)" style="margin-top:2px; width:16px; height:16px; accent-color:#facc15;">
-            <span style="font-size:12px; line-height:1.5; color:rgba(255,255,255,0.85);">
-              <strong style="color:#facc15;">Faster rendering</strong> — hardware video encoder, parallel clip generation, concurrent TTS for all engines, and faster AI narration. Turn <strong>OFF</strong> for the classic behavior. Output files are the same.
+          <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; background:var(--amber-tint); border:1px solid var(--amber); border-radius:6px; cursor:pointer;">
+            <input type="checkbox" id="settingSpeedMode" ${localStorage.getItem('speedMode') === 'true' ? 'checked' : ''} onchange="toggleSpeedOptions(this)" style="margin-top:2px; width:16px; height:16px; accent-color:var(--amber);">
+            <span style="font-size:12px; line-height:1.5; color:var(--ink-soft);">
+              <strong style="color:var(--amber);">Faster rendering</strong> — hardware video encoder, parallel clip generation, concurrent TTS for all engines, and faster AI narration. Turn <strong>OFF</strong> for the classic behavior. Output files are the same.
             </span>
           </label>
-          <div id="speedOptionsPanel" style="display:${localStorage.getItem('speedMode') === 'true' ? 'block' : 'none'}; margin-top:10px; padding:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(250,204,21,0.2); border-radius:8px;">
-            <div style="font-size:11px; font-weight:700; letter-spacing:0.5px; color:rgba(255,255,255,0.5); margin-bottom:10px;">⚙️ SPEED SETTINGS — ADJUST FOR YOUR HARDWARE</div>
+          <div id="speedOptionsPanel" style="display:${localStorage.getItem('speedMode') === 'true' ? 'block' : 'none'}; margin-top:10px; padding:14px; background:var(--paper-tint); border:1px solid var(--amber); border-radius:6px;">
+            <div style="font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:10px;">⚙️ Speed settings for your hardware</div>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
               <select id="speedPresetSelect" class="form-select" style="max-width:260px;" onchange="applySpeedPreset(this.value)">
                 <option value="custom">Custom</option>
@@ -506,12 +510,12 @@ function renderSourceStep() {
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px 16px;">
               <div>
-                <label class="form-label" style="font-size:11px;">CLIP WORKERS (PARALLEL ENCODES)</label>
+                <label class="form-label" style="font-size:12px;">Clip workers (parallel encodes)</label>
                 <input type="number" id="speedClipWorkers" class="form-select" min="1" max="16" value="4">
                 <div class="text-xs text-dim" style="margin-top:2px;">More = faster, uses more CPU/RAM. Low-end: 2 · High-end: 6+</div>
               </div>
               <div>
-                <label class="form-label" style="font-size:11px;">VIDEO ENCODER</label>
+                <label class="form-label" style="font-size:12px;">Video encoder</label>
                 <select id="speedEncoder" class="form-select">
                   <option value="auto" selected>Auto (best available)</option>
                   <option value="videotoolbox">Hardware (Apple VideoToolbox)</option>
@@ -520,19 +524,19 @@ function renderSourceStep() {
                 <div class="text-xs text-dim" id="speedEncoderHint" style="margin-top:2px;">Auto picks hardware when available</div>
               </div>
               <div>
-                <label class="form-label" style="font-size:11px;">EDGE TTS PARALLEL REQUESTS</label>
+                <label class="form-label" style="font-size:12px;">Edge TTS parallel requests</label>
                 <input type="number" id="speedEdgeWorkers" class="form-select" min="1" max="12" value="6">
                 <div class="text-xs text-dim" style="margin-top:2px;">Free service — 4–8 is safe</div>
               </div>
               <div>
-                <label class="form-label" style="font-size:11px;">ELEVENLABS PARALLEL REQUESTS</label>
+                <label class="form-label" style="font-size:12px;">ElevenLabs parallel requests</label>
                 <input type="number" id="speedELWorkers" class="form-select" min="1" max="4" value="2">
                 <div class="text-xs text-dim" style="margin-top:2px;">Keep low — paid API rate limits</div>
               </div>
               <div style="grid-column: 1 / -1;">
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                  <input type="checkbox" id="speedKokoroGPU" checked style="width:15px; height:15px; accent-color:#facc15;">
-                  <span style="font-size:12px; color:rgba(255,255,255,0.85);">Kokoro TTS on GPU (Apple MPS) — falls back to CPU automatically</span>
+                  <input type="checkbox" id="speedKokoroGPU" checked style="width:15px; height:15px; accent-color:var(--amber);">
+                  <span style="font-size:12px; color:var(--ink-soft);">Kokoro TTS on GPU (Apple MPS) — falls back to CPU automatically</span>
                 </label>
               </div>
             </div>
@@ -545,8 +549,8 @@ function renderSourceStep() {
   actions.innerHTML = `
     <div></div>
     <div class="step-actions-right">
-      <button class="btn" style="background:linear-gradient(135deg,#facc15,#f59e0b); color:#111; font-weight:700;" onclick="runFullBatchFromSource()" title="Load + run every step on ALL chapters automatically">🚀 Run Full Batch</button>
-      <button class="btn btn-primary" onclick="startSource()">Load Chapter →</button>
+      <button class="btn" style="background:var(--amber); color:#fff; font-weight:700;" onclick="runFullBatchFromSource()" title="Load + run every step on ALL chapters automatically">🚀 Run Full Batch</button>
+      <button class="btn btn-primary" onclick="startSource()">Load Chapter</button>
     </div>`;
 
   // Re-render analyze results if we already have them
@@ -620,17 +624,17 @@ function renderAnalyzeResult(data) {
   const lastCh = chapters.length > 0 ? chapters[chapters.length - 1].number : 1;
 
   resultEl.innerHTML = `
-    <div style="margin-top:12px; padding:20px; background:linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(168, 85, 247, 0.08)); border:2px solid rgba(59, 130, 246, 0.3); border-radius:var(--radius-md);">
+    <div style="margin-top:12px; padding:20px; background:var(--blue-tint); border:2px solid var(--blue); border-radius:var(--radius-md);">
       <div style="display:flex; gap:16px; align-items:flex-start;">
-        ${data.cover_url ? `<img src="${esc(data.cover_url)}" style="width:90px; height:125px; border-radius:8px; object-fit:cover; border:2px solid rgba(59, 130, 246, 0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.3);" onerror="this.style.display='none'">` : ''}
+        ${data.cover_url ? `<img src="${esc(data.cover_url)}" style="width:90px; height:125px; border-radius:6px; object-fit:cover; border:2px solid var(--ink); box-shadow: 4px 4px 0 rgba(27,28,31,0.2);" onerror="this.style.display='none'">` : ''}
         <div style="flex:1;">
-          <div style="font-size:20px; font-weight:800; color:#fff; margin-bottom:6px;">📖 ${esc(data.manga_name)}</div>
-          <div class="text-xs" style="color:rgba(255,255,255,0.7); margin-bottom:8px; font-weight:500;">
+          <div style="font-size:20px; font-weight:800; font-family:var(--font-display); color:var(--ink); margin-bottom:6px;">📖 ${esc(data.manga_name)}</div>
+          <div class="text-xs" style="color:var(--text-secondary); margin-bottom:8px; font-weight:500;">
             <span>🌐 ${esc(data.site || 'Unknown Site')}</span>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
             <div class="badge badge-success" style="font-size:13px; font-weight:600;">✓ ${data.total_chapters} chapters available</div>
-            <div class="badge" style="background:rgba(59, 130, 246, 0.2); border:1px solid rgba(59, 130, 246, 0.4); font-size:13px;">
+            <div class="badge" style="background:var(--paper); border:1px solid var(--blue); color:var(--blue); font-size:13px;">
               📊 Ch.${firstCh} → Ch.${lastCh}
             </div>
           </div>
@@ -639,7 +643,7 @@ function renderAnalyzeResult(data) {
 
       <div style="margin-top:18px;">
         <div class="form-group" style="margin-bottom:10px;">
-          <label class="form-label" style="font-size:13px; font-weight:700; color:#fff;">📥 SELECT CHAPTERS TO DOWNLOAD</label>
+          <label class="form-label" style="font-size:13px; font-weight:700; color:var(--ink);">📥 Select chapters to download</label>
           <div style="display:flex; gap:8px; align-items:center;">
             <input type="text" class="form-input" id="inputChapterRange" style="flex:1; font-weight:600;"
                    placeholder="e.g. 23 or 23-67 or 1,5,10" value="${Math.round(firstCh)}">
@@ -647,12 +651,12 @@ function renderAnalyzeResult(data) {
               📥 Download
             </button>
           </div>
-          <div class="text-xs" style="color:rgba(255,255,255,0.65); margin-top:6px; line-height:1.5;">
-            💡 <b>Single:</b> <code style="background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:4px;">23</code> 
-            &nbsp;·&nbsp; <b>Range:</b> <code style="background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:4px;">23-67</code> 
-            &nbsp;·&nbsp; <b>Multiple:</b> <code style="background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:4px;">1,5,10</code>
+          <div class="text-xs" style="color:var(--text-secondary); margin-top:6px; line-height:1.5;">
+            💡 <b>Single:</b> <code style="background:var(--paper); padding:2px 6px; border-radius:4px; border:1px solid var(--hairline);">23</code>
+            <b>Range:</b> <code style="background:var(--paper); padding:2px 6px; border-radius:4px; border:1px solid var(--hairline);">23-67</code>
+            <b>Multiple:</b> <code style="background:var(--paper); padding:2px 6px; border-radius:4px; border:1px solid var(--hairline);">1,5,10</code>
             <br>
-            <span style="color:rgba(255,255,255,0.5); font-size:11px;">For batch processing: Download multiple chapters and process them all at once!</span>
+            <span style="color:var(--text-dim); font-size:11px;">For batch processing: download multiple chapters and process them all at once.</span>
           </div>
         </div>
       </div>
@@ -759,18 +763,18 @@ socket.on('step_complete', function _handleDownload(data) {
   
   if (resultEl && downloaded.length > 0) {
     resultEl.innerHTML = `
-      <div style="margin-top:16px; padding:16px; background:rgba(34, 197, 94, 0.1); border:2px solid rgba(34, 197, 94, 0.4); border-radius:8px;">
+      <div style="margin-top:16px; padding:16px; background:var(--green-tint); border:2px solid var(--green); border-radius:8px;">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-          <div class="badge badge-success" style="font-size:14px; font-weight:700; padding:6px 12px;">✓ DOWNLOAD COMPLETE</div>
-          <div style="font-size:16px; font-weight:800; color:#fff;">📚 ${esc(mangaName)}</div>
+          <div class="badge badge-success" style="font-size:14px; font-weight:700; padding:6px 12px;">✓ Download complete</div>
+          <div style="font-size:16px; font-weight:800; font-family:var(--font-display); color:var(--ink);">📚 ${esc(mangaName)}</div>
         </div>
         
-        <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:6px; margin-bottom:12px;">
-          <div style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.9); margin-bottom:8px;">
+        <div style="background:var(--paper); padding:12px; border-radius:6px; border:1px solid var(--green); margin-bottom:12px;">
+          <div style="font-size:13px; font-weight:600; color:var(--ink); margin-bottom:8px;">
             📊 Downloaded ${downloaded.length} chapter${downloaded.length > 1 ? 's' : ''} • ${result.total_images || 0} total images
           </div>
           ${downloaded.map(d => `
-            <div class="text-xs" style="color:rgba(255,255,255,0.75); margin:4px 0; padding:4px 8px; background:rgba(0,0,0,0.15); border-radius:4px; font-family:monospace;">
+            <div class="text-xs" style="color:var(--text-secondary); margin:4px 0; padding:4px 8px; background:var(--paper-tint); border-radius:4px; font-family:monospace;">
               📖 Chapter ${String(d.chapter).padStart(5, '0')}: ${d.images} images
               <br><span style="opacity:0.6; font-size:11px;">→ ${esc(d.path)}</span>
             </div>
@@ -778,9 +782,9 @@ socket.on('step_complete', function _handleDownload(data) {
         </div>
         
         ${downloaded.length > 1 ? `
-          <div style="padding:12px; background:rgba(59, 130, 246, 0.15); border:1px solid rgba(59, 130, 246, 0.3); border-radius:6px; margin-bottom:12px;">
-            <div style="font-size:12px; font-weight:700; color:#60a5fa; margin-bottom:4px;">🎯 BATCH MODE ENABLED</div>
-            <div style="font-size:11px; color:rgba(255,255,255,0.7);">
+          <div style="padding:12px; background:var(--blue-tint); border:1px solid var(--blue); border-radius:6px; margin-bottom:12px;">
+            <div style="font-size:12px; font-weight:700; color:var(--blue); margin-bottom:4px;">🎯 Batch mode is on</div>
+            <div style="font-size:11px; color:var(--ink-soft);">
               You downloaded multiple chapters! Use chapter navigation (← →) to switch between them during processing.
             </div>
           </div>
@@ -809,7 +813,7 @@ socket.on('step_complete', function _handleDownload(data) {
     if (downloaded.length > 1) {
       resultEl.innerHTML += `
         <div style="margin-top:12px;">
-          <label class="form-label" style="font-weight:700;">🔀 SWITCH STARTING CHAPTER</label>
+          <label class="form-label" style="font-weight:700;">🔀 Switch starting chapter</label>
           <select id="selectDownloadedChapter" class="form-select" onchange="selectDownloadedChapter(this)" style="font-weight:600;">
             ${downloaded.map((d, i) => `
               <option value="${i}" ${i === 0 ? 'selected' : ''}>
@@ -817,7 +821,7 @@ socket.on('step_complete', function _handleDownload(data) {
               </option>
             `).join('')}
           </select>
-          <div class="text-xs" style="color:rgba(255,255,255,0.6); margin-top:6px;">
+          <div class="text-xs" style="color:var(--text-dim); margin-top:6px;">
             Select which chapter to process first. You can switch between chapters later using ← → navigation.
           </div>
         </div>`;
@@ -1033,7 +1037,7 @@ function renderStitchStep() {
       <button class="btn btn-ghost" onclick="stitchZoomReset()">Reset</button>
       <button class="btn btn-ghost" id="btnDrawMode" onclick="toggleDrawMode()" title="Enable/Disable drawing new boxes" style="margin-left:16px; font-size:14px;">✏️ Draw</button>
       <span class="text-xs text-dim" style="margin-left:8px" id="stitchImgInfo"></span>
-      <span id="drawModeHint" class="text-xs" style="display:none; margin-left:12px; color: #ff0055; font-weight: 600;">✏️ Draw Mode Active - Click and drag to add boxes</span>
+      <span id="drawModeHint" class="text-xs" style="display:none; margin-left:12px; color: var(--red); font-weight: 600;">✏️ Draw mode is on — click and drag to add boxes</span>
     </div>
 
     <div class="stitched-viewer" id="stitchViewer" style="display:none">
@@ -1060,7 +1064,7 @@ function renderStitchStep() {
   actions.innerHTML = `
     <button class="btn btn-ghost" onclick="prevStep()">← Back</button>
     <div class="step-actions-right">
-      <button class="btn" style="background:linear-gradient(135deg,#facc15,#f59e0b); color:#111; font-weight:700;" onclick="runFullBatchForProject(APP.projectName)" title="Run every remaining step on ALL chapters automatically">🚀 Run Full Batch</button>
+      <button class="btn" style="background:var(--amber); color:#fff; font-weight:700;" onclick="runFullBatchForProject(APP.projectName)" title="Run every remaining step on ALL chapters automatically">🚀 Run Full Batch</button>
       <button class="btn btn-secondary" onclick="runStitch()" id="btnStitch">Stitch Pages</button>
       <button class="btn btn-secondary" onclick="runDetect()" id="btnDetect" disabled>${isNarrated ? 'Detect 1 — Bubble Panels' : 'Detect Panels'}</button>
       <button class="btn btn-secondary" onclick="removeOverlappingBoxes()" id="btnRemoveOverlaps" style="display:none" title="Auto-fix overlapping boxes">🔧 Fix Overlaps</button>
@@ -1193,7 +1197,7 @@ function toggleDrawMode() {
   
   if (drawMode) {
     btn.classList.add('active');
-    btn.style.background = '#ff0055';
+    btn.style.background = 'var(--red)';
     btn.style.color = '#fff';
     hint.style.display = 'inline';
     overlay.classList.add('draw-mode');
@@ -1235,7 +1239,7 @@ function renderStitchBoxes() {
   }
   
   if (overlapCount > 0) {
-    document.getElementById('stitchBoxCount').innerHTML = `${stitchBoxes.length} detection boxes <span style="color: #ff9500; font-weight: 600;">⚠️ ${overlapCount} overlap${overlapCount > 1 ? 's' : ''} detected</span>`;
+    document.getElementById('stitchBoxCount').innerHTML = `${stitchBoxes.length} detection boxes <span style="color: var(--amber); font-weight: 600;">⚠️ ${overlapCount} overlap${overlapCount > 1 ? 's' : ''} detected</span>`;
   }
   
   const hasBoxes = stitchBoxes.length > 0;
@@ -1569,25 +1573,25 @@ async function runFullBatchForProject(projectName) {
 function showBatchOverlay(project, steps) {
   hideBatchOverlay();
   const stepList = (steps || []).map((s, i) =>
-    `<span id="batchStepChip_${s}" style="padding:3px 10px; border-radius:12px; font-size:11px; background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.45);">${BATCH_STEP_LABELS[s] || s}</span>`
-  ).join('<span style="color:rgba(255,255,255,0.25);">→</span> ');
+    `<span id="batchStepChip_${s}" style="padding:3px 10px; border-radius:4px; font-size:11px; border:1px solid var(--hairline); background:var(--desk); color:var(--text-dim);">${BATCH_STEP_LABELS[s] || s}</span>`
+  ).join(' ');
   const el = document.createElement('div');
   el.id = 'batchOverlay';
-  el.style.cssText = 'position:fixed; inset:0; background:rgba(5,6,10,0.88); z-index:9999; display:flex; align-items:center; justify-content:center;';
+  el.style.cssText = 'position:fixed; inset:0; background:rgba(27,28,31,0.55); z-index:9999; display:flex; align-items:center; justify-content:center;';
   el.innerHTML = `
-    <div style="width:min(720px, 92vw); background:#12141c; border:1px solid rgba(250,204,21,0.35); border-radius:16px; padding:28px;">
+    <div style="width:min(720px, 92vw); background:var(--paper); border:2px solid var(--ink); border-radius:8px; box-shadow:8px 8px 0 rgba(27,28,31,0.25); padding:28px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-        <div style="font-size:18px; font-weight:800;">🚀 Full Batch Running</div>
+        <div style="font-size:18px; font-weight:800; font-family:var(--font-display);">🚀 Full Batch Running</div>
         <button class="btn btn-secondary" style="padding:6px 14px;" onclick="cancelFullBatch()">✕ Cancel</button>
       </div>
-      <div style="font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:12px;">${esc(project)}</div>
+      <div style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">${esc(project)}</div>
       <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px;">${stepList}</div>
       <div id="batchOverlayStatus" style="font-size:15px; font-weight:700; margin-bottom:6px;">Starting…</div>
-      <div id="batchOverlayMsg" style="font-size:12px; color:rgba(255,255,255,0.55); margin-bottom:14px; min-height:16px;"></div>
-      <div style="background:rgba(255,255,255,0.08); border-radius:8px; height:10px; overflow:hidden;">
-        <div id="batchOverlayBar" style="height:100%; width:0%; background:linear-gradient(90deg,#facc15,#f59e0b); transition:width 0.3s;"></div>
+      <div id="batchOverlayMsg" style="font-size:12px; color:var(--text-dim); margin-bottom:14px; min-height:16px;"></div>
+      <div style="background:var(--desk); border:2px solid var(--ink); border-radius:999px; height:14px; overflow:hidden;">
+        <div id="batchOverlayBar" style="height:100%; width:0%; background:var(--blue); transition:width 0.3s;"></div>
       </div>
-      <div id="batchOverlayPercent" style="text-align:right; font-size:12px; color:rgba(255,255,255,0.5); margin-top:6px;">0%</div>
+      <div id="batchOverlayPercent" style="text-align:right; font-size:12px; color:var(--text-dim); margin-top:6px;">0%</div>
     </div>`;
   document.body.appendChild(el);
 }
@@ -1600,11 +1604,12 @@ function updateBatchOverlay(step, message, percent) {
   if (step) {
     if (statusEl) statusEl.textContent = BATCH_STEP_LABELS[step] || step;
     document.querySelectorAll('[id^="batchStepChip_"]').forEach(c => {
-      c.style.background = 'rgba(255,255,255,0.07)';
-      c.style.color = 'rgba(255,255,255,0.45)';
+      c.style.background = 'var(--desk)';
+      c.style.color = 'var(--text-dim)';
+      c.style.borderColor = 'var(--hairline)';
     });
     const chip = document.getElementById(`batchStepChip_${step}`);
-    if (chip) { chip.style.background = 'rgba(250,204,21,0.25)'; chip.style.color = '#facc15'; }
+    if (chip) { chip.style.background = 'var(--blue)'; chip.style.color = '#fff'; chip.style.borderColor = 'var(--ink)'; }
   }
   if (msgEl && message) msgEl.textContent = message;
   const pct = Math.max(0, Math.min(100, Math.round(percent || 0)));
@@ -2351,6 +2356,7 @@ async function renarratePanel(panelId) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || r.status);
+    if (!data.narration || data.narration.startsWith('[')) throw new Error(data.narration || 'model returned empty');
     const ta = document.getElementById(`narr_edit_${panelId}`);
     if (ta) ta.value = data.narration;
     if (status) status.textContent = '✓ re-narrated';
@@ -2602,7 +2608,7 @@ function renderCastStep() {
 
         <div style="display:flex; gap:8px; margin-bottom:10px;">
           <button class="btn btn-ghost" onclick="castClearSelection()" style="flex:1;">Clear</button>
-          <button class="btn" style="flex:1; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; font-weight:700;" onclick="castAddCharacter()" id="btnCastAdd">💾 Save</button>
+          <button class="btn" style="flex:1; background:var(--blue); color:#fff; font-weight:700;" onclick="castAddCharacter()" id="btnCastAdd">💾 Save</button>
         </div>
         <div style="display:flex; gap:8px;">
           <button class="btn btn-secondary" onclick="castImport()" style="flex:1; font-size:12px;">📥 Import Cast File</button>
@@ -2763,7 +2769,7 @@ function renderCastFaces() {
     const selected = APP.castSelection.has(idx);
     return `
       <div data-face-idx="${idx}" onclick="toggleCastFace(${idx})"
-           style="cursor:pointer; position:relative; border:3px solid ${selected ? '#8b5cf6' : 'transparent'};
+           style="cursor:pointer; position:relative; border:3px solid ${selected ? 'var(--blue)' : 'transparent'};
                   border-radius:10px; overflow:hidden; background:var(--bg-card);">
         <img src="${url}" style="width:100%; aspect-ratio:1; object-fit:cover; display:block;">
         <div style="position:absolute; top:3px; left:3px; padding:0 6px; border-radius:6px;
@@ -2788,7 +2794,7 @@ function renderCastSelection() {
     const url = `/api/charbuilder/face/${APP.castSession.session_id}/${f.filename}`;
     return `
       <div onclick="toggleCastFace(${idx})" title="Click to remove"
-           style="cursor:pointer; width:52px; height:52px; border-radius:8px; overflow:hidden; border:2px solid #8b5cf6;">
+           style="cursor:pointer; width:52px; height:52px; border-radius:8px; overflow:hidden; border:2px solid var(--blue);">
         <img src="${url}" style="width:100%; height:100%; object-fit:cover; display:block;">
       </div>`;
   }).join('');
@@ -2867,7 +2873,7 @@ function renderCastCharacters() {
         <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; max-height:92px; overflow-y:auto;">${thumbs || '<span class="text-xs text-dim">no reference images</span>'}</div>
         <div style="font-size:13px; font-weight:600; margin-bottom:2px;">Name: ${esc(c.name || '')}</div>
         <div style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">Gender: ${esc((c.gender || 'unknown').charAt(0).toUpperCase() + (c.gender || '').slice(1))}</div>
-        <button class="btn btn-ghost" style="width:100%; padding:7px 0; font-size:12px; color:#f87171; border:1px solid rgba(248,113,113,0.35); border-radius:8px;"
+        <button class="btn btn-ghost" style="width:100%; padding:7px 0; font-size:12px; color:var(--color-error); border:1px solid var(--color-error); border-radius:6px;"
                 onclick="castDeleteCharacter('${esc(c.id || '')}')">🗑️ Delete ID</button>
       </div>`;
   }).join('');
@@ -3151,13 +3157,13 @@ async function testGeminiKeys() {
     const data = await r.json();
     const rows = (data.results || []).map(res => {
       const icon = res.valid ? '✅' : '❌';
-      const cls = res.valid ? 'var(--color-success)' : '#f87171';
+      const cls = res.valid ? 'var(--color-success)' : 'var(--color-error)';
       return `<div style="color:${cls}; margin:2px 0;">${icon} Key ${esc(res.key_masked)} — ${esc(res.reason)}</div>`;
     }).join('');
     const ok = (data.results || []).filter(r => r.valid).length;
     if (statusEl) statusEl.innerHTML = `${rows}<div style="margin-top:4px;">${ok}/${data.results.length} key(s) usable</div>`;
   } catch (e) {
-    if (statusEl) statusEl.innerHTML = '<span style="color:#f87171;">❌ Test failed: ' + esc(e.message) + '</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--color-error);">❌ Test failed: ' + esc(e.message) + '</span>';
   } finally {
     const btn = document.getElementById('btnTestKeys');
     if (btn) { btn.disabled = false; btn.textContent = '🔑 Test Keys'; }
@@ -4099,11 +4105,11 @@ function setBatchMode(isBatch) {
     const radio = label.querySelector('input[type="radio"]');
     if (radio) {
       if (radio.checked) {
-        label.style.borderColor = 'rgba(59, 130, 246, 0.8)';
-        label.style.background = 'rgba(59, 130, 246, 0.15)';
+        label.style.borderColor = 'var(--blue)';
+        label.style.background = 'var(--blue-tint)';
       } else {
-        label.style.borderColor = 'rgba(255,255,255,0.1)';
-        label.style.background = 'transparent';
+        label.style.borderColor = '#9BA0A8';
+        label.style.background = 'var(--paper)';
       }
     }
   });

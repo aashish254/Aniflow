@@ -285,11 +285,19 @@ def _render_clip_ffmpeg(base_info, audio_path, clip_path, duration, fps,
             prev = 'vf'
         chain += f";[{prev}]format=yuv420p[vout]"
 
-        cmd = [ff, '-y', '-loglevel', 'error', *inputs,
-               '-filter_complex', chain, '-map', '[vout]']
+        # Audio input must be added BEFORE cmd is built — cmd expands
+        # *inputs in place, so appending to inputs afterwards left the file
+        # out of the command while -map still referenced its index
+        # ("Invalid input file index: 2" on every narrated clip).
+        audio_idx = None
         if audio_path and os.path.exists(audio_path):
             inputs += ['-i', audio_path]
             audio_idx = idx
+            idx += 1
+
+        cmd = [ff, '-y', '-loglevel', 'error', *inputs,
+               '-filter_complex', chain, '-map', '[vout]']
+        if audio_idx is not None:
             cmd += ['-map', f'{audio_idx}:a', '-c:a', 'aac', '-b:a', '160k']
         else:
             cmd += ['-an']

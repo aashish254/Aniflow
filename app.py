@@ -1191,6 +1191,9 @@ def regenerate_narration(project_name, panel_id):
         cast_characters=cast_characters,
         chapter_text=sliding_window,
         cast_reference_images=cast_reference_images)
+    if not new_narration or new_narration.startswith('['):
+        # Never overwrite the panel with an empty/failed generation
+        return jsonify({'error': new_narration or 'Writer model returned empty narration. Try again.'}), 502
     panel['narration'] = new_narration
     panel['scene_narration'] = new_narration
     state.save()

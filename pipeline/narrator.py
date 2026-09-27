@@ -7,10 +7,11 @@ Phase 1 (The Eyes / Structural Parser) → qwen2.5vl:3b  [vision model]
   - Extracts a raw "visual beat" — factual description of what is happening
   - Does NOT write narration, just metadata
 
-Phase 2 (The Writer / Casual Storyteller) → gemma3:27b  [pure text model]
+Phase 2 (The Writer / Recap Storyteller) → gemma3:27b  [pure text model]
   - Receives ONLY text: visual beat + extracted dialogue + story-so-far
-  - Writes casual, flowing YouTube-style recap narration (a friend explaining
-    the chapter — not an AI captioning images)
+  - Writes immersive, dramatic third-person recap narration in the style of
+    popular manhwa recap channels — sincere storytelling, no sarcasm, no
+    mocking the characters
   - 100% of model weights focused on creative writing (no image processing)
 
 Toggle: config.DECOUPLED_NARRATION
@@ -35,7 +36,7 @@ FALLBACK_MODEL = "qwen2.5vl:7b"
 
 # Bump when the narration prompt changes meaningfully — cached narrations made
 # with an older prompt are treated as stale and get regenerated on re-run.
-NARRATION_PROMPT_VERSION = 4
+NARRATION_PROMPT_VERSION = 5
 
 
 class Narrator:
@@ -376,6 +377,13 @@ class Narrator:
         )
 
         try:
+            # Only the LAST image is the panel to describe. The cast reference
+            # faces earlier in the list are for the writer's name recognition —
+            # sending all 12+ here ballooned every call to ~15k vision tokens
+            # (10s/panel, GPU heat) for a model that is told NOT to name anyone.
+            panel_image = images[-1] if images else None
+            if isinstance(panel_image, tuple):
+                panel_image = panel_image[0]
             resp = requests.post(
                 f"{self.host}/api/chat",
                 json={
@@ -385,7 +393,7 @@ class Narrator:
                         {
                             "role": "user",
                             "content": prompt,
-                            "images": [b64 for b64, _ in images],
+                            "images": [panel_image] if panel_image else [],
                         },
                     ],
                     "options": {
@@ -439,47 +447,60 @@ class Narrator:
 
         # ── Build the full prompt ─────────────────────────────────
         prompt = (
-            "You narrate manhwa recap videos. Your #1 goal: sound like a person casually "
-            "explaining the chapter to a friend who hasn't read it — NOT like an AI describing "
-            "images one by one. The viewer can SEE the art; your narration IS the story.\n\n"
+            "You are the voice of a popular manhwa recap YouTube channel. You tell the story "
+            "straight: immersive, dramatic third-person narration that pulls the viewer in. "
+            "You take the characters and their emotions seriously — you are NEVER sarcastic, "
+            "never mock them, never break the fourth wall, and never use slang like 'bro' or "
+            "'dude' or winks at the audience. The viewer can SEE the art; your narration is the "
+            "story being told.\n\n"
             "RULES:\n"
-            "1. Write 2-4 sentences for this beat (roughly 35-70 words). Tell the story fully — context, motivation, why it matters. Never a single throwaway line.\n"
-            "2. NEVER describe what's already obvious visually. Add the context, motivation, or transition "
-            "the art can't show — don't caption what's on screen.\n"
-            "3. FLOW: your line continues the previous narration as ONE continuous story. Use transitions "
-            "('so', 'and that's when', 'meanwhile'). Never restart, never summarize.\n"
-            "4. PRESENT TENSE, THIRD PERSON. Active voice.\n"
-            "5. When there's dialogue, weave what was said into your sentence naturally — paraphrase or "
-            "quote briefly, whichever sounds better spoken aloud. Never ignore the dialogue.\n"
-            "6. Have a PERSONALITY: you can react to absurd or funny moments like a friend would "
-            "('bro really thought that would work') — just never let the joke bury the story.\n"
-            "7. If this is the opening of the chapter, your line is the HOOK: lead with the most interesting "
-            "question, twist, or absurd situation. NEVER start with 'This story begins' or 'Meet our protagonist'.\n"
-            "8. NEVER describe images ('in this panel', 'we see') and NEVER comment on art.\n"
-            "9. NEVER invent character names. Use only names from the Dialogue or KNOWN CHARACTERS list; "
-            "otherwise say 'he', 'she', 'the guy', etc.\n"
-            "10. Vary sentence rhythm naturally. Quiet moments get quiet lines; big moments get punch.\n\n"
+            "1. Write 2-4 sentences for this beat (roughly 35-70 words). Tell the story fully — "
+            "emotion, motivation, stakes, why it matters. Never a single throwaway line.\n"
+            "2. NEVER describe what's visually obvious. Narrate the inner story — what the "
+            "character feels, decides, risks — not what the drawing shows.\n"
+            "3. FLOW: your line continues the previous narration as ONE unbroken story. Use "
+            "quiet transitions ('and', 'so', 'but', 'moments later'). Never restart, never summarize.\n"
+            "4. PRESENT TENSE, THIRD PERSON, active voice. Smooth, novel-like spoken sentences.\n"
+            "5. Dialogue: weave in what was said naturally — paraphrase the meaning, or quote a "
+            "few words at most, always clear who is speaking. Never ignore the dialogue.\n"
+            "6. If this is the opening of the chapter, your line is the HOOK: open on the most "
+            "gripping question, tension, or turning point. NEVER start with 'This story begins' "
+            "or 'Meet our protagonist'.\n"
+            "7. NEVER mention panels, images, art, or the medium itself.\n"
+            "8. NEVER invent character names. Use only names from the Dialogue or KNOWN "
+            "CHARACTERS list; otherwise 'he', 'she', 'the young man', 'the girl'.\n"
+            "9. Output PLAIN TEXT ONLY — no markdown, no asterisks, no quotes around words, no "
+            "bold, no emojis. Your text is read aloud by a text-to-speech voice.\n"
+            "10. Match the rhythm to the moment: quiet scenes get gentle lines; turning points "
+            "get a short punch.\n\n"
             "=========================================\n"
-            "TONE EXAMPLES (this is the voice — a friend walking you through the chapter)\n"
+            "TONE EXAMPLES (this is the voice — dramatic, sincere, immersive)\n"
             "=========================================\n"
             "Visual Beat: Guy holding a sealed love letter at his desk.\n"
             "Dialogue: 'This love letter... a whole semester in the making.'\n"
-            "Output: So this guy's been sitting on a love letter for an entire semester, and it's eating him alive. Today's the day he finally works up the nerve. Or at least, that's what he keeps telling himself.\n\n"
+            "Output: For an entire semester, one letter has been waiting at the bottom of his bag — "
+            "every word rewritten until it felt perfect. And now, at last, he's ready to hand it over.\n\n"
             "Visual Beat: Same guy turns around in class, letter in hand.\n"
             "Dialogue: 'Today I'm gonna give it to her.'\n"
-            "Output: And there he goes — letter in hand, heart hammering. He's fully convinced today is the day everything changes.\n\n"
+            "Output: His heart is pounding as he turns around in his seat. Today is the day he tells "
+            "her — no more rehearsals, no more second-guessing himself.\n\n"
             "Visual Beat: A girl sits by the window, sneaking glances at him.\n"
             "Dialogue: 'Because she occasionally peeks at me.'\n"
-            "Output: Turns out the girl he likes has been sneaking glances at him this whole time. Naturally, his brain takes that tiny signal and runs a mile with it.\n\n"
+            "Output: And he has proof. Across the classroom, she keeps stealing glances at him — "
+            "each one quietly convincing him that today might actually change everything.\n\n"
             "Visual Beat: Phone screen showing a university admission result.\n"
             "Dialogue: 'computer engineering'\n"
-            "Output: Ritsuki had just clawed his way out of a dead-end life by getting into computer engineering. For once, things were actually looking up for him.\n\n"
+            "Output: Ritsuki had clawed his way out of a life with no promises the day the admission "
+            "notice for computer engineering lit up his screen. For the first time, the future looked "
+            "like it was finally on his side.\n\n"
             "Visual Beat: A truck slamming into someone at night.\n"
             "Dialogue: (none)\n"
-            "Output: And that's when Truck-kun cancels all of it in about two seconds. Of course. The one night his life turns around, it ends in the middle of the road.\n\n"
+            "Output: He never made it home. One instant of headlights and screeching brakes, and the "
+            "life he had just started to love was over — right there in the middle of the road.\n\n"
             "Visual Beat: The same guy waking up as a baby in a fantasy world.\n"
             "Dialogue: (none)\n"
-            "Output: Then he wakes up as Ian Raven — a black-haired baby whose peasant parents instantly know something is off. His second life starts not with power, but with suspicion.\n\n"
+            "Output: Then his eyes opened again — as a newborn, in a world he did not recognize. His "
+            "second life did not begin with power. It began with the wary stare of his new parents.\n\n"
             "=========================================\n"
             "YOUR TURN\n"
             "=========================================\n"
@@ -487,14 +508,13 @@ class Narrator:
             f"{continuity_section}\n"
             f"Visual Beat: {visual_beat if visual_beat else '(no image description available)'}\n"
             f"Dialogue: {key_dialogue if key_dialogue else '(none)'}\n\n"
-            "Output (2-4 sentences, 35-70 words, match the example style above):"
+            "Output (2-4 sentences, 35-70 words, plain text, match the example voice above):"
         )
 
         try:
             # Vision-capable writers (qwen2.5vl:7b, llama3.2-vision, ...) get
             # the cast faces + the clean panel image directly; text-only
             # writers (qwen2.5:14b) rely on the Phase 1 visual beat instead.
-            message = {"role": "user", "content": prompt}
             if self._model_supports_vision(self.text_writer_model):
                 ollama_images = []
                 for ref in (cast_reference_images or []):
@@ -504,22 +524,50 @@ class Narrator:
                 if panel_image_b64:
                     ollama_images.append(panel_image_b64[0] if isinstance(panel_image_b64, tuple) else panel_image_b64)
                 if ollama_images:
-                    message["images"] = ollama_images
                     prompt += (
-                        "\nAttached images, in order: cast member reference faces first "
+                        "\n\nAttached images, in order: cast member reference faces first "
                         "(use them to recognise who is in the panel), then the clean panel "
                         "to narrate."
                     )
                     print(f"[Narrator] Phase 2: attaching {len(ollama_images)} image(s) to vision writer")
+                    return self._chat_with_retries(prompt, ollama_images) or \
+                        "[Narration failed — writer model returned empty. Re-run this step to retry.]"
+            return self._chat_with_retries(prompt, None) or \
+                "[Narration failed — writer model returned empty. Re-run this step to retry.]"
 
+        except requests.exceptions.Timeout:
+            return "[Narration timed out — text writer model may still be loading.]"
+        except Exception as e:
+            return f"[Phase 2 error: {e}]"
+
+    def _chat_with_retries(self, prompt: str, images: list = None) -> str:
+        """Ask the writer model for narration, retrying empty generations.
+
+        gemma3 under Ollama sometimes returns an instant empty completion
+        (immediate end-of-turn) — panels would silently save as ''. A small
+        temperature bump clears it; if it still comes back empty, a second
+        installed text model takes the pen so a chapter never half-narrates.
+        """
+        attempts = [
+            (self.text_writer_model, 0.78),
+            (self.text_writer_model, 0.95),
+        ]
+        fallback = self._fallback_writer()
+        if fallback:
+            attempts.append((fallback, 0.8))
+
+        for model, temp in attempts:
+            message = {"role": "user", "content": prompt}
+            if images:
+                message["images"] = images
             resp = requests.post(
                 f"{self.host}/api/chat",
                 json={
-                    "model": self.text_writer_model,
+                    "model": model,
                     "stream": False,
                     "messages": [message],
                     "options": {
-                        "temperature": 0.78,
+                        "temperature": temp,
                         "top_p": 0.90,
                         "num_predict": 250,
                         "repeat_penalty": 1.20,
@@ -528,13 +576,27 @@ class Narrator:
                 timeout=config.OLLAMA_TIMEOUT,
             )
             resp.raise_for_status()
-            narration = resp.json()["message"]["content"].strip()
-            return self._clean_narration(narration)
+            narration = self._clean_narration(resp.json()["message"]["content"].strip())
+            if narration:
+                if model != self.text_writer_model:
+                    print(f"[Narrator] Phase 2: primary writer returned empty — {model} wrote this line")
+                return narration
+            print(f"[Narrator] Phase 2: {model} generated empty narration, retrying...")
+        return ""
 
-        except requests.exceptions.Timeout:
-            return "[Narration timed out — text writer model may still be loading.]"
-        except Exception as e:
-            return f"[Phase 2 error: {e}]"
+    def _fallback_writer(self):
+        """Another installed text model to lean on if the primary writer fails."""
+        try:
+            resp = requests.get(f"{self.host}/api/tags", timeout=5)
+            if resp.status_code != 200:
+                return None
+            names = [m['name'] for m in resp.json().get('models', [])]
+            for cand in names:
+                if cand != self.text_writer_model and not self._model_supports_vision(cand):
+                    return cand
+        except Exception:
+            pass
+        return None
 
     # ─────────────────────────────────────────────────────────────
     # Core narration writer — orchestrates Phase 1 → Phase 2
@@ -652,9 +714,10 @@ class Narrator:
             context_section += " ".join(recent)
 
         prompt = (
-            "You narrate manhwa recap videos. Your #1 goal: sound like a person casually explaining the chapter "
-            "to a friend who hasn't read it — NOT like an AI describing images one by one. "
-            "Your narration flows as one continuous story, not as isolated descriptions.\n\n"
+            "You are the voice of a popular manhwa recap YouTube channel. Tell the story straight: "
+            "immersive, dramatic third-person narration. Take the characters seriously — NEVER be "
+            "sarcastic, never mock them, never use slang like 'bro' or break the fourth wall. "
+            "The viewer can see the art; your narration is the story being told.\n\n"
             f"{image_note}"
             f"{text_section}"
             f"{desc_section}"
@@ -669,8 +732,8 @@ class Narrator:
             "('so', 'and that's when', 'meanwhile'). The full chapter should read as one unbroken story.\n"
             "3. DON'T STATE THE OBVIOUS: the viewer can see the art. Add the context, motivation, and transitions "
             "the images can't show — don't caption what's on screen.\n"
-            "4. PERSONALITY: You can react to absurd or funny moments like a friend would, as long as it never "
-            "buries the actual story information.\n"
+            "4. SINCERITY: take every moment seriously — no sarcasm, no mocking the characters, "
+            "no 'bro' slang, no breaking the fourth wall.\n"
             "5. HOOK: If this is the first narration of the chapter, open with the most interesting twist or "
             "question. Never start with 'This story begins' or 'Meet our protagonist'.\n"
             "6. DIALOGUE: When a character speaks, weave their words into the narration naturally — paraphrase or "
@@ -839,6 +902,9 @@ class Narrator:
                 continue
             cleaned.append(line)
         result = ' '.join(cleaned)
+        # Markdown emphasis never belongs in text a TTS voice reads aloud
+        result = re.sub(r'[*_]{1,2}([^*_]+)[*_]{1,2}', r'\1', result)
+        result = result.replace('*', '')
         if result.startswith('"') and result.endswith('"'):
             result = result[1:-1]
         return result.strip()

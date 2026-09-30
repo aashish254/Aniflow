@@ -49,7 +49,12 @@ class Narrator:
     """
 
     def __init__(self, model: str = None, host: str = None):
-        self.host = (host or config.OLLAMA_HOST).rstrip('/')
+        self.use_nine_router = getattr(config, 'USE_NINE_ROUTER', False)
+        self.nine_router_api_key = getattr(config, 'NINE_ROUTER_API_KEY', '')
+        if self.use_nine_router:
+            self.host = (host or getattr(config, 'NINE_ROUTER_HOST', 'http://127.0.0.1:20128')).rstrip('/')
+        else:
+            self.host = (host or config.OLLAMA_HOST).rstrip('/')
         self._context_buffer = []
         self._max_context = 10
         self.decoupled = getattr(config, 'DECOUPLED_NARRATION', True)
@@ -287,17 +292,33 @@ class Narrator:
         )
 
     def check_ollama(self) -> dict:
-        """Check Ollama status and available models."""
+        """Check Ollama or 9router status and available models."""
         result = {'running': False, 'model_available': False, 'models': []}
         try:
-            resp = requests.get(f"{self.host}/api/tags", timeout=5)
-            if resp.status_code == 200:
-                result['running'] = True
-                models = [m['name'] for m in resp.json().get('models', [])]
-                result['models'] = models
-                result['model_available'] = bool(self.writer_model)
-                result['vision_model'] = self.vision_model
-                result['writer_model'] = self.writer_model
+            if self.use_nine_router:
+                # 9router OpenAI-compatible models endpoint
+                headers = {}
+                if self.nine_router_api_key:
+                    headers['Authorization'] = f'Bearer {self.nine_router_api_key}'
+                resp = requests.get(f"{self.host}/v1/models", headers=headers, timeout=5)
+                if resp.status_code == 200:
+                    result['running'] = True
+                    data = resp.json().get('data', [])
+                    models = [m['id'] for m in data]
+                    result['models'] = models
+                    # For simplicity, consider model available if our writer_model is in list
+                    result['model_available'] = self.writer_model in models if self.writer_model else bool(models)
+                    result['vision_model'] = self.vision_model
+                    result['writer_model'] = self.writer_model
+            else:
+                resp = requests.get(f"{self.host}/api/tags", timeout=5)
+                if resp.status_code == 200:
+                    result['running'] = True
+                    models = [m['name'] for m in resp.json().get('models', [])]
+                    result['models'] = models
+                    result['model_available'] = bool(self.writer_model)
+                    result['vision_model'] = self.vision_model
+                    result['writer_model'] = self.writer_model
         except Exception:
             pass
         return result

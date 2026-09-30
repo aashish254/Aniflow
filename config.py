@@ -94,11 +94,15 @@ MAGI_MODEL_ID = os.getenv("MAGI_MODEL_ID",
     os.path.join(BASE_DIR, "magiv2"))
 DEFAULT_TEXT_EXTRACTION_METHOD = "magi"
 
-# ─── Ollama Settings ──────────────────────────────────────────────
-OLLAMA_HOST = "http://localhost:11434"
-OLLAMA_MODEL = "qwen2.5vl:7b"               # Legacy fallback
-VISION_MODEL  = "qwen2.5vl:3b"       # Step 1 — The Eyes (text extraction + scene description)
-WRITER_MODEL  = "qwen2.5vl:3b" # Step 2 — The Writer (narration) [legacy, used when DECOUPLED_NARRATION=False]
+# ─── Ollama / 9router Settings ────────────────────────────────────
+USE_NINE_ROUTER = os.getenv("USE_NINE_ROUTER", "0") == "1"
+NINE_ROUTER_HOST = os.getenv("NINE_ROUTER_HOST", "http://127.0.0.1:20128")
+NINE_ROUTER_API_KEY = os.getenv("NINE_ROUTER_API_KEY", "")
+
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5vl:7b")               # Legacy fallback
+VISION_MODEL  = os.getenv("VISION_MODEL", "qwen2.5vl:3b")       # Step 1 — The Eyes (text extraction + scene description)
+WRITER_MODEL  = os.getenv("WRITER_MODEL", "qwen2.5vl:3b") # Step 2 — The Writer (narration) [legacy, used when DECOUPLED_NARRATION=False]
 # Step 2b — Pure-text storyteller (decoupled pipeline).
 # gemma3:27b writes noticeably more natural, human-sounding recap narration
 # than smaller models. Override via TEXT_WRITER_MODEL env var (e.g. qwen2.5:14b

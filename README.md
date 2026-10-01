@@ -56,7 +56,7 @@ AniFlow downloads manhwa/webtoon chapters, detects and crops panels using YOLO, 
 |---|---|---|
 | **Python 3.10 – 3.12** | Runtime | [python.org](https://www.python.org/downloads/) |
 | **FFmpeg** | Video/audio processing | `brew install ffmpeg` (macOS) · `sudo apt install ffmpeg` (Linux) · [ffmpeg.org](https://ffmpeg.org/download.html) (Windows) |
-| **Ollama** | Local AI narration & text extraction | [ollama.com](https://ollama.com) |
+| **9router / Ollama** | Local AI narration & text extraction | [9router](https://9router.com) / [ollama.com](https://ollama.com) |
 | **~10 GB disk** | Python env + model weights | — |
 
 > **GPU recommended** but not required. Apple Silicon Macs and NVIDIA GPUs will significantly speed up panel detection and Kokoro TTS.
@@ -83,37 +83,92 @@ The setup script will check dependencies, create a virtual environment, install 
 git clone https://github.com/aashish254/Aniflow.git
 cd AniFlow
 
-# 2. Create a virtual environment
-python3 -m venv venv
-source venv/bin/activate          # macOS / Linux
-# venv\Scripts\activate           # Windows (Command Prompt)
-# venv\Scripts\Activate.ps1       # Windows (PowerShell)
+# 2. Create a virtual environment (Python 3.12 recommended)
+py -3.12 -m venv venv             # Windows
+# python3 -m venv venv            # macOS / Linux
 
-# 3. Install Python dependencies (~10-20 min, torch is large)
+# 3. Activate virtual environment
+# Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
+# macOS / Linux:
+# source venv/bin/activate
+
+# 4. Install Python dependencies (~10-20 min, torch is large)
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 4. Pull the Ollama models (requires Ollama running)
-ollama pull qwen2.5vl:3b          # Vision parser (required)
-ollama pull qwen2.5:14b           # Text-only narrator (recommended)
-# ollama pull qwen2.5vl:7b        # Vision narrator (optional, larger)
+# 5. Configure 9router (Alternative to Ollama)
+# If you use 9router, set these environment variables before running:
+# Windows (PowerShell):
+# $env:USE_NINE_ROUTER="1"
+# $env:NINE_ROUTER_HOST="http://127.0.0.1:20128"
+# $env:VISION_MODEL="Free-Tier"
+# $env:WRITER_MODEL="Free-Tier"
+# $env:TEXT_WRITER_MODEL="Free-Tier"
 
-# 5. (Optional) Copy and fill in API keys
-cp .env.example .env
+# 6. Pull Ollama models (Skip if using 9router)
+# ollama pull qwen2.5vl:3b
+# ollama pull qwen2.5:14b
 
-# 6. Start the app
+# 7. Run the app
 python app.py
-# → Open http://localhost:8080
+
+# 8. Open UI in browser:
+# http://localhost:8080
 ```
 
-### Windows Setup
+---
+
+## 🇮🇩 Panduan Bahasa Indonesia
+
+### 📋 Persyaratan
+
+| Dependensi | Fungsi | Instalasi |
+|---|---|---|
+| **Python 3.10 – 3.12** | Runtime | [python.org](https://www.python.org/downloads/) |
+| **FFmpeg** | Pemrosesan video/audio | `brew install ffmpeg` (macOS) · `sudo apt install ffmpeg` (Linux) · [ffmpeg.org](https://ffmpeg.org/download.html) (Windows) |
+| **9router / Ollama** | AI lokal untuk narasi & ekstraksi teks | [9router](https://9router.com) / [ollama.com](https://ollama.com) |
+| **~10 GB disk** | Python env + model weights | — |
+
+> **GPU disarankan** tapi tidak wajib. Apple Silicon Mac dan GPU NVIDIA akan sangat mempercepat deteksi panel dan Kokoro TTS.
+
+### 🚀 Cara Menjalankan Aplikasi (Windows & 9router)
+
+#### Langkah 1: Pastikan 9router Aktif
+Pastikan 9router sudah berjalan di latar belakang (port default: `http://127.0.0.1:20128`).
+
+#### Langkah 2: Jalankan di PowerShell
 
 ```powershell
-# 1. Clone and enter the project
-git clone https://github.com/aashish254/Aniflow.git
-cd AniFlow
+# 1. Masuk folder proyek
+cd D:\Aniflow
 
-# 2. Run the setup script
+# 2. Aktifkan virtual environment
+.\venv\Scripts\Activate.ps1
+
+# 3. Set environment variables untuk 9router
+$env:USE_NINE_ROUTER="1"
+$env:NINE_ROUTER_HOST="http://127.0.0.1:20128"
+$env:VISION_MODEL="Free-Tier"
+$env:WRITER_MODEL="Free-Tier"
+$env:TEXT_WRITER_MODEL="Free-Tier"
+
+# (Opsional) Jika 9router butuh API Key
+# $env:NINE_ROUTER_API_KEY="API_KEY_ANDA"
+
+# 4. Jalankan server AniFlow
+python app.py
+```
+
+#### Langkah 3: Buka Browser
+Akses antarmuka web di:
+```text
+http://localhost:8080
+```
+
+---
+
+## ⚙️ Configuration
 setup.bat
 ```
 

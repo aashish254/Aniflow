@@ -66,7 +66,7 @@ AniFlow downloads manhwa/webtoon chapters, detects and crops panels using YOLO, 
 |---|---|---|
 | **Python 3.10 – 3.12** | Runtime | [python.org](https://www.python.org/downloads/) |
 | **FFmpeg** | Video/audio processing | `brew install ffmpeg` (macOS) · `sudo apt install ffmpeg` (Linux) · [ffmpeg.org](https://ffmpeg.org/download.html) (Windows) |
-| **9router / Ollama** | Local AI narration & text extraction | [9router](https://9router.com) / [ollama.com](https://ollama.com) |
+| **Ollama** | Local AI narration & text extraction | [ollama.com](https://ollama.com) — or use [9router](https://9router.com) for narration only |
 | **~10 GB disk** | Python env + model weights | — |
 
 > **GPU recommended** but not required. Apple Silicon Macs and NVIDIA GPUs will significantly speed up panel detection and Kokoro TTS.
@@ -129,60 +129,59 @@ python app.py
 
 ---
 
-## 🇮🇩 Panduan Bahasa Indonesia
-
-### 📋 Persyaratan
-
-| Dependensi | Fungsi | Instalasi |
-|---|---|---|
-| **Python 3.10 – 3.12** | Runtime | [python.org](https://www.python.org/downloads/) |
-| **FFmpeg** | Pemrosesan video/audio | `brew install ffmpeg` (macOS) · `sudo apt install ffmpeg` (Linux) · [ffmpeg.org](https://ffmpeg.org/download.html) (Windows) |
-| **9router / Ollama** | AI lokal untuk narasi & ekstraksi teks | [9router](https://9router.com) / [ollama.com](https://ollama.com) |
-| **~10 GB disk** | Python env + model weights | — |
-
-> **GPU disarankan** tapi tidak wajib. Apple Silicon Mac dan GPU NVIDIA akan sangat mempercepat deteksi panel dan Kokoro TTS.
-
-### 🚀 Cara Menjalankan Aplikasi (Windows & 9router)
-
-#### Langkah 1: Pastikan 9router Aktif
-Pastikan 9router sudah berjalan di latar belakang (port default: `http://127.0.0.1:20128`).
-
-#### Langkah 2: Jalankan di PowerShell
+### Windows Setup
 
 ```powershell
-# 1. Masuk folder proyek
-cd D:\Aniflow
+# 1. Clone and enter the project
+git clone https://github.com/aashish254/Aniflow.git
+cd AniFlow
 
-# 2. Aktifkan virtual environment
-.\venv\Scripts\Activate.ps1
-
-# 3. Set environment variables untuk 9router
-$env:USE_NINE_ROUTER="1"
-$env:NINE_ROUTER_HOST="http://127.0.0.1:20128"
-$env:VISION_MODEL="Free-Tier"
-$env:WRITER_MODEL="Free-Tier"
-$env:TEXT_WRITER_MODEL="Free-Tier"
-
-# (Opsional) Jika 9router butuh API Key
-# $env:NINE_ROUTER_API_KEY="API_KEY_ANDA"
-
-# 4. Jalankan server AniFlow
-python app.py
-```
-
-#### Langkah 3: Buka Browser
-Akses antarmuka web di:
-```text
-http://localhost:8080
-```
-
----
-
-## ⚙️ Configuration
+# 2. Run the setup script
 setup.bat
 ```
 
 Or follow the manual steps above using `venv\Scripts\activate` instead.
+
+### 9router (alternative to Ollama)
+
+[9router](https://9router.com) exposes models through an OpenAI-compatible local endpoint, so
+you can run the narrator without pulling multi-gigabyte Ollama models. It replaces Ollama for
+**AI narration only** — speech-bubble text extraction still needs Ollama.
+
+Start 9router first (default `http://127.0.0.1:20128`), then point AniFlow at it:
+
+```powershell
+# Windows (PowerShell)
+.\venv\Scripts\Activate.ps1
+
+$env:USE_NINE_ROUTER = "1"
+$env:NINE_ROUTER_HOST = "http://127.0.0.1:20128"
+$env:VISION_MODEL = "Free-Tier"
+$env:WRITER_MODEL = "Free-Tier"
+$env:TEXT_WRITER_MODEL = "Free-Tier"
+
+# Only if your 9router instance requires one:
+# $env:NINE_ROUTER_API_KEY = "your_key"
+
+python app.py
+```
+
+```bash
+# macOS / Linux
+source venv/bin/activate
+
+export USE_NINE_ROUTER=1
+export NINE_ROUTER_HOST=http://127.0.0.1:20128
+export VISION_MODEL=Free-Tier
+export WRITER_MODEL=Free-Tier
+export TEXT_WRITER_MODEL=Free-Tier
+
+python app.py
+```
+
+The same variables can live in `.env` instead — uncomment the 9router block in
+`.env.example`. Once `USE_NINE_ROUTER=1` is set, the app's model health check queries
+9router's `/v1/models` endpoint instead of Ollama's `/api/tags`.
 
 ---
 
@@ -295,6 +294,7 @@ cp .env.example .env
 | `ANTHROPIC_API_KEY` | Claude narration | Only if using Claude |
 | `ELEVENLABS_API_KEY` | ElevenLabs TTS | Only if using ElevenLabs |
 | `MAL_CLIENT_ID` | MyAnimeList import | Only if importing characters from MAL |
+| `NINE_ROUTER_API_KEY` | 9router narration backend | Only if your 9router instance requires one |
 
 > **Ollama + Edge TTS work completely offline** — no API keys needed for the core pipeline.
 
@@ -305,6 +305,11 @@ cp .env.example .env
 | `qwen2.5vl:3b` | Vision parser (reads panels) | ~2 GB | ✅ Required |
 | `qwen2.5:14b` | Text-only narrator | ~9 GB | 📌 Recommended |
 | `qwen2.5vl:7b` | Vision narrator (sees panels + cast) | ~5 GB | Optional |
+
+Override any of these with the `VISION_MODEL`, `WRITER_MODEL` and `TEXT_WRITER_MODEL`
+environment variables. With 9router you will want to — it addresses models by its own
+tier names (e.g. `Free-Tier`) rather than Ollama tags, and the health check only reports
+the model as available when the name matches one 9router returns.
 
 ---
 

@@ -14,6 +14,16 @@
   <img src="https://img.shields.io/badge/Platform-macOS%20|%20Linux%20|%20Windows-lightgrey?style=for-the-badge" alt="Platform">
 </p>
 
+<p align="center">
+  <img src="static/docs/ui-home.png" alt="AniFlow web UI" width="860"><br>
+  <sub>The AniFlow web UI — pick a recap mode and run the pipeline end to end in your browser.</sub>
+</p>
+
+<p align="center">
+  <img src="static/docs/output-samples.jpg" alt="Recap clips rendered by AniFlow" width="960"><br>
+  <sub>Real output: frames from clips rendered by both pipelines — AI narration on clean panels, dialogue read with the original speech bubbles.</sub>
+</p>
+
 ---
 
 AniFlow downloads manhwa/webtoon chapters, detects and crops panels using YOLO, extracts speech-bubble text, generates AI narration, converts it to speech, and renders video clips — all through a browser-based UI.

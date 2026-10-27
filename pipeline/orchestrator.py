@@ -2745,7 +2745,7 @@ class Orchestrator:
             return state
 
         s = state.settings
-        host    = config.OLLAMA_HOST
+        backend = self.narrator.transport
         from pipeline.scene_narrator import SCENE_SIZE_DEFAULT
         scene_size = int(s.get('scene_size', SCENE_SIZE_DEFAULT))
 
@@ -2800,7 +2800,7 @@ class Orchestrator:
             state.panels = narrate_all_scenes(
                 panels=state.panels,
                 project_dir=state.project_dir,
-                host=host,
+                backend=backend,
                 model=text_model,
                 scene_size=scene_size,
                 cast_characters=cast_characters,

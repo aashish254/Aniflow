@@ -66,7 +66,7 @@ async function checkStatus() {
   try {
     const r = await fetch('/api/status');
     const d = await r.json();
-    setDot('dotOllama', d.ollama);
+    setDot('dotOllama', d.ollama?.running);
     setDot('dotFFmpeg', d.ffmpeg);
     setDot('dotTTS', d.tts?.edge_tts || false);
   } catch (e) { /* ignore */ }

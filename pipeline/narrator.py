@@ -27,6 +27,7 @@ import requests
 from typing import Optional
 from PIL import Image
 import config
+from pipeline import llm_transport
 
 # ─── Model constants ──────────────────────────────────────────────
 VISION_MODEL   = "qwen2.5vl:3b"          # Phase 1: vision parser (extracts visual beats)
@@ -49,12 +50,8 @@ class Narrator:
     """
 
     def __init__(self, model: str = None, host: str = None):
-        self.use_nine_router = getattr(config, 'USE_NINE_ROUTER', False)
-        self.nine_router_api_key = getattr(config, 'NINE_ROUTER_API_KEY', '')
-        if self.use_nine_router:
-            self.host = (host or getattr(config, 'NINE_ROUTER_HOST', 'http://127.0.0.1:20128')).rstrip('/')
-        else:
-            self.host = (host or config.OLLAMA_HOST).rstrip('/')
+        self.transport = llm_transport.build_transport(host)
+        self.host = self.transport.host
         self._context_buffer = []
         self._max_context = 10
         self.decoupled = getattr(config, 'DECOUPLED_NARRATION', True)
@@ -66,6 +63,7 @@ class Narrator:
         self.model = self.writer_model
 
         mode = "DECOUPLED" if self.decoupled else "LEGACY"
+        print(f"[Narrator] Backend: {self.transport.kind} @ {self.host}")
         print(f"[Narrator] Mode: {mode}")
         print(f"[Narrator] Vision Parser  : {self.vision_model}")
         if self.decoupled:
@@ -292,36 +290,16 @@ class Narrator:
         )
 
     def check_ollama(self) -> dict:
-        """Check Ollama or 9router status and available models."""
-        result = {'running': False, 'model_available': False, 'models': []}
-        try:
-            if self.use_nine_router:
-                # 9router OpenAI-compatible models endpoint
-                headers = {}
-                if self.nine_router_api_key:
-                    headers['Authorization'] = f'Bearer {self.nine_router_api_key}'
-                resp = requests.get(f"{self.host}/v1/models", headers=headers, timeout=5)
-                if resp.status_code == 200:
-                    result['running'] = True
-                    data = resp.json().get('data', [])
-                    models = [m['id'] for m in data]
-                    result['models'] = models
-                    # For simplicity, consider model available if our writer_model is in list
-                    result['model_available'] = self.writer_model in models if self.writer_model else bool(models)
-                    result['vision_model'] = self.vision_model
-                    result['writer_model'] = self.writer_model
-            else:
-                resp = requests.get(f"{self.host}/api/tags", timeout=5)
-                if resp.status_code == 200:
-                    result['running'] = True
-                    models = [m['name'] for m in resp.json().get('models', [])]
-                    result['models'] = models
-                    result['model_available'] = bool(self.writer_model)
-                    result['vision_model'] = self.vision_model
-                    result['writer_model'] = self.writer_model
-        except Exception:
-            pass
-        return result
+        """Health of whichever backend is active — Ollama or 9router."""
+        info = self.transport.describe()
+        models = info['models']
+        return {
+            'running': info['running'],
+            'model_available': bool(self.writer_model) and self.writer_model in models,
+            'models': models,
+            'vision_model': self.vision_model,
+            'writer_model': self.writer_model,
+        }
 
     def detect_characters(self, image_path: str) -> list[dict]:
         """Detect characters in a panel using the writer vision model."""
@@ -339,19 +317,10 @@ class Narrator:
         )
 
         try:
-            resp = requests.post(
-                f"{self.host}/api/generate",
-                json={
-                    "model": self.writer_model,
-                    "prompt": prompt,
-                    "images": [image_b64],
-                    "stream": False,
-                    "options": {"temperature": 0.3, "num_predict": 500}
-                },
-                timeout=config.OLLAMA_TIMEOUT
+            content = self.transport.generate(
+                self.writer_model, prompt, [image_b64],
+                temperature=0.3, max_tokens=500,
             )
-            resp.raise_for_status()
-            content = resp.json().get('response', '').strip()
             if '```' in content:
                 m = re.search(r'```(?:json)?\s*(.*?)```', content, re.DOTALL)
                 if m:
@@ -405,28 +374,11 @@ class Narrator:
             panel_image = images[-1] if images else None
             if isinstance(panel_image, tuple):
                 panel_image = panel_image[0]
-            resp = requests.post(
-                f"{self.host}/api/chat",
-                json={
-                    "model": self.vision_model,
-                    "stream": False,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": prompt,
-                            "images": [panel_image] if panel_image else [],
-                        },
-                    ],
-                    "options": {
-                        "temperature": 0.3,
-                        "top_p": 0.85,
-                        "num_predict": 150,
-                    },
-                },
-                timeout=config.OLLAMA_TIMEOUT,
+            raw = self.transport.chat(
+                self.vision_model, prompt,
+                [panel_image] if panel_image else None,
+                temperature=0.3, top_p=0.85, max_tokens=150,
             )
-            resp.raise_for_status()
-            raw = resp.json()["message"]["content"].strip()
             # Clean up any preamble
             for prefix in ['here is', "here's", 'sure,', 'the panel', 'visual beat:']:
                 if raw.lower().startswith(prefix):
@@ -574,28 +526,13 @@ class Narrator:
             attempts.append((fallback, 0.8))
 
         for model, temp in attempts:
-            message = {"role": "user", "content": prompt}
-            if images:
-                message["images"] = images
-            resp = requests.post(
-                f"{self.host}/api/chat",
-                json={
-                    "model": model,
-                    "stream": False,
-                    "messages": [message],
-                    "options": {
-                        "temperature": temp,
-                        "top_p": 0.90,
-                        # 15-25 word target with headroom — a hard cap so the
-                        # model physically cannot run long on a single panel.
-                        "num_predict": 90,
-                        "repeat_penalty": 1.20,
-                    },
-                },
-                timeout=config.OLLAMA_TIMEOUT,
+            # 15-25 word target with headroom — a hard cap so the model
+            # physically cannot run long on a single panel.
+            reply = self.transport.chat(
+                model, prompt, images,
+                temperature=temp, top_p=0.90, max_tokens=90, repeat_penalty=1.20,
             )
-            resp.raise_for_status()
-            narration = self._clean_narration(resp.json()["message"]["content"].strip())
+            narration = self._clean_narration(reply)
             if narration:
                 if model != self.text_writer_model:
                     print(f"[Narrator] Phase 2: primary writer returned empty — {model} wrote this line")
@@ -606,10 +543,7 @@ class Narrator:
     def _fallback_writer(self):
         """Another installed text model to lean on if the primary writer fails."""
         try:
-            resp = requests.get(f"{self.host}/api/tags", timeout=5)
-            if resp.status_code != 200:
-                return None
-            names = [m['name'] for m in resp.json().get('models', [])]
+            names = self.transport.list_models()
             for cand in names:
                 if cand != self.text_writer_model and not self._model_supports_vision(cand):
                     return cand
@@ -772,54 +706,23 @@ class Narrator:
         )
 
         try:
-            resp = requests.post(
-                f"{self.host}/api/chat",
-                json={
-                    "model": self.writer_model,
-                    "stream": False,
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": prompt,
-                            "images": [b64 for b64, _ in images],
-                        },
-                    ],
-                    "options": {
-                        "temperature": 0.82,
-                        "top_p": 0.92,
-                        "num_predict": 90,
-                    },
-                },
-                timeout=config.OLLAMA_TIMEOUT,
+            narration = self.transport.chat(
+                self.writer_model, prompt, [b64 for b64, _ in images],
+                temperature=0.82, top_p=0.92, max_tokens=90,
             )
-            resp.raise_for_status()
-            narration = resp.json()["message"]["content"].strip()
             return self._clean_narration(narration)
 
         except requests.exceptions.ConnectionError:
             try:
                 with open(self._temp_path(images[0] if images else ""), 'rb') as f:
                     image_b64 = base64.b64encode(f.read()).decode('utf-8')
-                resp = requests.post(
-                    f"{self.host}/api/generate",
-                    json={
-                        "model": self.writer_model,
-                        "prompt": prompt,
-                        "images": [image_b64],
-                        "stream": False,
-                        "options": {
-                            "temperature": 0.82,
-                            "top_p": 0.92,
-                            "num_predict": 90,
-                        },
-                    },
-                    timeout=config.OLLAMA_TIMEOUT,
+                narration = self.transport.generate(
+                    self.writer_model, prompt, [image_b64],
+                    temperature=0.82, top_p=0.92, max_tokens=90,
                 )
-                resp.raise_for_status()
-                narration = resp.json().get('response', '').strip()
                 return self._clean_narration(narration)
             except Exception:
-                return "[Ollama not running. Please start Ollama first.]"
+                return f"[{self.transport.kind} not reachable at {self.host}. Start it first.]"
         except requests.exceptions.Timeout:
             return "[Narration timed out — model may still be loading.]"
         except Exception as e:
@@ -859,43 +762,40 @@ class Narrator:
     def _resolve_model(self, preferred: str) -> str:
         """Find the best matching installed model for a preferred name."""
         try:
-            resp = requests.get(f"{self.host}/api/tags", timeout=5)
-            if resp.status_code == 200:
-                models = [m['name'] for m in resp.json().get('models', [])]
-                if not models:
-                    return preferred
-                # Exact match first
-                if preferred in models:
-                    return preferred
-                # Family-aware matching: qwen2.5 should NOT match qwen2.5vl
-                base = preferred.split(':')[0]
-                is_vision_request = any(k in base.lower() for k in ['vl', 'vision', 'llava'])
-                family_matches = []
-                for m in models:
-                    m_base = m.split(':')[0]
-                    m_is_vision = any(k in m_base.lower() for k in ['vl', 'vision', 'llava'])
-                    # Only match same family AND same type (vision↔vision, text↔text)
-                    if m_base == base:
-                        family_matches.append(m)
-                    elif m_base.startswith(base) and is_vision_request == m_is_vision:
-                        family_matches.append(m)
-                if family_matches:
-                    return family_matches[0]
-                # Broader fallback: any model of the same type
-                if is_vision_request:
-                    vision_models = [m for m in models if any(k in m.lower() for k in ['vl', 'vision', 'llava'])]
-                    if vision_models:
-                        return vision_models[0]
-                else:
-                    # For text models, prefer non-vision models
-                    text_models = [m for m in models if not any(k in m.lower() for k in ['vl', 'vision', 'llava'])]
-                    if text_models:
-                        return text_models[0]
-                if models:
-                    return models[0]
+            models = self.transport.list_models()
         except Exception:
-            pass
-        return preferred
+            return preferred
+        if not models or preferred in models:
+            return preferred
+        # An OpenAI-compatible server lists capability tiers, not Ollama model
+        # families — guessing here would silently swap in an unrelated model.
+        if self.transport.kind != "ollama":
+            return preferred
+        # Family-aware matching: qwen2.5 should NOT match qwen2.5vl
+        base = preferred.split(':')[0]
+        is_vision_request = any(k in base.lower() for k in ['vl', 'vision', 'llava'])
+        family_matches = []
+        for m in models:
+            m_base = m.split(':')[0]
+            m_is_vision = any(k in m_base.lower() for k in ['vl', 'vision', 'llava'])
+            # Only match same family AND same type (vision↔vision, text↔text)
+            if m_base == base:
+                family_matches.append(m)
+            elif m_base.startswith(base) and is_vision_request == m_is_vision:
+                family_matches.append(m)
+        if family_matches:
+            return family_matches[0]
+        # Broader fallback: any model of the same type
+        if is_vision_request:
+            vision_models = [m for m in models if any(k in m.lower() for k in ['vl', 'vision', 'llava'])]
+            if vision_models:
+                return vision_models[0]
+        else:
+            # For text models, prefer non-vision models
+            text_models = [m for m in models if not any(k in m.lower() for k in ['vl', 'vision', 'llava'])]
+            if text_models:
+                return text_models[0]
+        return models[0]
 
     def _clean_narration(self, text: str) -> str:
         """Strip AI preamble and artifacts from narration output."""

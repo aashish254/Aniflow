@@ -25,15 +25,14 @@ import re
 import requests
 from PIL import Image
 import config
+from pipeline import llm_transport
 
 
-def _fast_json(payload: dict) -> dict:
+def _keep_alive() -> str | None:
     """⚡ SPEED MODE: keep the Ollama model loaded between panels — avoids a
     10-30s model reload whenever Ollama would otherwise unload it. No effect
-    on the model output; classic mode sends the payload unchanged."""
-    if getattr(config, 'SPEED_MODE', False) and 'keep_alive' not in payload:
-        payload = {**payload, 'keep_alive': '30m'}
-    return payload
+    on the model output; classic mode sends no keep_alive."""
+    return '30m' if getattr(config, 'SPEED_MODE', False) else None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -138,7 +137,7 @@ def _select_images_fallback(scene_panels: list) -> list:
 # PHASE 1: VISION PARSER — Extract Visual Beats
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _extract_visual_beat_for_panel(panel: dict, host: str, vision_model: str,
+def _extract_visual_beat_for_panel(panel: dict, backend: llm_transport.BaseTransport, vision_model: str,
                                     timeout: int = 180) -> str:
     """Phase 1: Send a single panel image to the vision model for a raw visual beat."""
     img_path = panel.get('path', '')
@@ -161,24 +160,11 @@ def _extract_visual_beat_for_panel(panel: dict, host: str, vision_model: str,
     )
 
     try:
-        resp = requests.post(
-            f"{host}/api/chat",
-            json=_fast_json({
-                "model": vision_model,
-                "stream": False,
-                "messages": [
-                    {"role": "user", "content": prompt, "images": [b64]},
-                ],
-                "options": {
-                    "temperature": 0.3,
-                    "top_p": 0.85,
-                    "num_predict": 150,
-                },
-            }),
-            timeout=timeout,
+        raw = llm_transport.as_transport(backend).chat(
+            vision_model, prompt, [b64],
+            temperature=0.3, top_p=0.85, max_tokens=150,
+            keep_alive=_keep_alive(), timeout=timeout,
         )
-        resp.raise_for_status()
-        raw = resp.json()["message"]["content"].strip()
         # Clean preamble
         for prefix in ['here is', "here's", 'sure,', 'the panel', 'visual beat:']:
             if raw.lower().startswith(prefix):
@@ -191,7 +177,7 @@ def _extract_visual_beat_for_panel(panel: dict, host: str, vision_model: str,
 
 def _extract_visual_beats_for_scene(
     scene_panels: list,
-    host: str,
+    backend: llm_transport.BaseTransport,
     vision_model: str,
     timeout: int = 180,
     cancel_check=None,
@@ -209,7 +195,7 @@ def _extract_visual_beats_for_scene(
         beats = {}
         with ThreadPoolExecutor(max_workers=ai_workers) as pool:
             futures = {
-                pool.submit(_extract_visual_beat_for_panel, p, host, vision_model, timeout): idx
+                pool.submit(_extract_visual_beat_for_panel, p, backend, vision_model, timeout): idx
                 for idx, p in enumerate(scene_panels)
             }
             for fut, idx in futures.items():
@@ -225,7 +211,7 @@ def _extract_visual_beats_for_scene(
     for p in scene_panels:
         if cancel_check and cancel_check():
             break
-        beat = _extract_visual_beat_for_panel(p, host, vision_model, timeout)
+        beat = _extract_visual_beat_for_panel(p, backend, vision_model, timeout)
         if beat:
             beats.append(beat)
             print(f"[SceneNarrator] Phase 1 panel {p.get('panel_id', '?')}: {beat[:60]}...")
@@ -564,7 +550,7 @@ def _build_legacy_prompt(
 
 def narrate_scene(
     scene_panels: list,
-    host: str,
+    backend: llm_transport.BaseTransport,
     model: str,
     story_so_far: list,
     cast_characters: list = None,
@@ -593,13 +579,13 @@ def narrate_scene(
 
     if decoupled:
         return _narrate_scene_decoupled(
-            scene_panels, host, model, story_so_far,
+            scene_panels, backend, model, story_so_far,
             cast_characters, timeout, cancel_check,
             chapter_context, vision_model, precomputed_beat,
         )
     else:
         return _narrate_scene_legacy(
-            scene_panels, host, model, story_so_far,
+            scene_panels, backend, model, story_so_far,
             cast_characters, timeout, cancel_check,
             chapter_context,
         )
@@ -607,7 +593,7 @@ def narrate_scene(
 
 def _narrate_scene_decoupled(
     scene_panels: list,
-    host: str,
+    backend: llm_transport.BaseTransport,
     text_model: str,
     story_so_far: list,
     cast_characters: list = None,
@@ -633,7 +619,7 @@ def _narrate_scene_decoupled(
               f"Phase 1 → extracting visual beats ({v_model})...")
 
         visual_beats = _extract_visual_beats_for_scene(
-            scene_panels, host, v_model, timeout, cancel_check
+            scene_panels, backend, v_model, timeout, cancel_check
         )
     if cancel_check and cancel_check():
         return "[cancelled]"
@@ -656,27 +642,12 @@ def _narrate_scene_decoupled(
             return "[cancelled]"
         try:
             # Pure text call — NO images sent to the text model
-            resp = requests.post(
-                f"{host}/api/chat",
-                json=_fast_json({
-                    "model": text_model,
-                    "stream": False,
-                    "messages": [
-                        {"role": "system", "content": sys_prompt},
-                        {"role": "user", "content": user_content},
-                    ],
-                    "options": {
-                        "temperature": 0.72 + attempt * 0.06,
-                        "top_p": 0.88,
-                        "num_predict": num_predict,
-                        "repeat_penalty": 1.18 + attempt * 0.04,
-                        "top_k": 40,
-                    },
-                }),
-                timeout=timeout,
+            raw = llm_transport.as_transport(backend).chat(
+                text_model, user_content, system=sys_prompt,
+                temperature=0.72 + attempt * 0.06, top_p=0.88,
+                max_tokens=num_predict, repeat_penalty=1.18 + attempt * 0.04,
+                top_k=40, keep_alive=_keep_alive(), timeout=timeout,
             )
-            resp.raise_for_status()
-            raw = resp.json()["message"]["content"].strip()
             result = _truncate_to_sentences(_clean_narration(raw), soft_max)
 
             if not result or result.startswith('['):
@@ -704,7 +675,7 @@ def _narrate_scene_decoupled(
 
 def _narrate_scene_legacy(
     scene_panels: list,
-    host: str,
+    backend: llm_transport.BaseTransport,
     model: str,
     story_so_far: list,
     cast_characters: list = None,
@@ -736,27 +707,12 @@ def _narrate_scene_legacy(
         if cancel_check and cancel_check():
             return "[cancelled]"
         try:
-            resp = requests.post(
-                f"{host}/api/chat",
-                json=_fast_json({
-                    "model": model,
-                    "stream": False,
-                    "messages": [
-                        {"role": "system", "content": sys_prompt},
-                        {"role": "user", "content": user_content, "images": images_all},
-                    ],
-                    "options": {
-                        "temperature": 0.72 + attempt * 0.06,
-                        "top_p": 0.88,
-                        "num_predict": num_predict,
-                        "repeat_penalty": 1.18 + attempt * 0.04,
-                        "top_k": 40,
-                    },
-                }),
-                timeout=timeout,
+            raw = llm_transport.as_transport(backend).chat(
+                model, user_content, images_all, system=sys_prompt,
+                temperature=0.72 + attempt * 0.06, top_p=0.88,
+                max_tokens=num_predict, repeat_penalty=1.18 + attempt * 0.04,
+                top_k=40, keep_alive=_keep_alive(), timeout=timeout,
             )
-            resp.raise_for_status()
-            raw = resp.json()["message"]["content"].strip()
             result = _truncate_to_sentences(_clean_narration(raw), soft_max)
 
             if not result or result.startswith('['):
@@ -796,27 +752,12 @@ def _narrate_scene_legacy(
         if cancel_check and cancel_check():
             return "[cancelled]"
         try:
-            resp = requests.post(
-                f"{host}/api/chat",
-                json=_fast_json({
-                    "model": model,
-                    "stream": False,
-                    "messages": [
-                        {"role": "system", "content": sys_prompt_b},
-                        {"role": "user", "content": user_content_b, "images": images_fb},
-                    ],
-                    "options": {
-                        "temperature": 0.74 + attempt * 0.06,
-                        "top_p": 0.88,
-                        "num_predict": num_predict_b,
-                        "repeat_penalty": 1.20 + attempt * 0.05,
-                        "top_k": 40,
-                    },
-                }),
-                timeout=timeout,
+            raw = llm_transport.as_transport(backend).chat(
+                model, user_content_b, images_fb, system=sys_prompt_b,
+                temperature=0.74 + attempt * 0.06, top_p=0.88,
+                max_tokens=num_predict_b, repeat_penalty=1.20 + attempt * 0.05,
+                top_k=40, keep_alive=_keep_alive(), timeout=timeout,
             )
-            resp.raise_for_status()
-            raw = resp.json()["message"]["content"].strip()
             result = _truncate_to_sentences(_clean_narration(raw), soft_max_b)
 
             bad, reason = _check_forbidden(result)
@@ -872,7 +813,7 @@ def _load_chapter_text(project_dir: str) -> str:
 def narrate_all_scenes(
     panels: list,
     project_dir: str,
-    host: str,
+    backend: llm_transport.BaseTransport,
     model: str,
     scene_size: int = SCENE_SIZE_DEFAULT,
     cast_characters: list = None,
@@ -946,7 +887,7 @@ def narrate_all_scenes(
                 progress_callback(0, total, f"Reading panels (parallel vision pass, {len(todo)} scenes)...")
             with ThreadPoolExecutor(max_workers=ai_workers) as pool:
                 futures = {
-                    pool.submit(_extract_visual_beats_for_scene, sp, host, v_model,
+                    pool.submit(_extract_visual_beats_for_scene, sp, backend, v_model,
                                 180, cancel_check): sid
                     for sid, sp in todo
                 }
@@ -987,7 +928,7 @@ def narrate_all_scenes(
             print(f"[SceneNarrator] ⏭  Reusing cached {scene_id}")
         else:
             narration = narrate_scene(
-                scene_panels, host, model,
+                scene_panels, backend, model,
                 story_so_far, cast_characters,
                 cancel_check=cancel_check,
                 chapter_context=chapter_context,

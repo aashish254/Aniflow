@@ -16,7 +16,7 @@ edge-tts>=6.1          # default narrator voice (free)
 requests>=2.31
 beautifulsoup4>=4.12
 lxml>=5.0
-curl_cffi>=0.7         # Cloudflare-friendly fetching
+curl_cffi>=0.17.0         # Cloudflare-friendly fetching
 cloudscraper>=1.2
 DrissionPage>=4.1      # headless-browser fallback for protected sites
 

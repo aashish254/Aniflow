@@ -899,7 +899,7 @@ def narrate_all_scenes(
                     done_count += 1
                     if progress_callback:
                         progress_callback(0, total, f"Vision pass: {done_count}/{len(todo)} scenes read")
-   
+
     # ── Main narration loop ──────────────────────────────────────────────────
     story_so_far  = []     # rolling memory (last 3 narrations)
     scene_results = []

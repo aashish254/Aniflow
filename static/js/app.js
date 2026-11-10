@@ -16,10 +16,10 @@ const APP = {
   projectData: null,    // fetched project state
   running: false,       // is a pipeline step running?
   steps: [],            // step definitions for current mode
-  
+
   // User-selected batch mode (explicit toggle)
   userBatchMode: false, // User's explicit choice: false = single, true = batch
-  
+
   // Chapter navigation for batch processing
   manhwaName: '',       // e.g., "Sword-Devouring-Swordmaster"
   currentChapter: 1,    // e.g., 1 (for Chapter_00001)
@@ -324,7 +324,7 @@ function renderSourceStep() {
   const body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <!-- Manhwa Downloader -->
     <div class="settings-panel" style="margin-top:0; margin-bottom:18px;">
       <div class="settings-panel-title">📥 Download Manhwa</div>
@@ -351,7 +351,7 @@ function renderSourceStep() {
       <input type="text" class="form-input" id="inputProjectName"
              placeholder="e.g. Solo Leveling" value="${esc(APP.projectName)}">
     </div>
-    
+
     <!-- BATCH MODE TOGGLE -->
     <div class="form-group" style="margin-top:20px; padding:16px; background:var(--blue-tint); border:2px solid var(--blue); border-radius:8px;">
       <label class="form-label" style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
@@ -378,7 +378,7 @@ function renderSourceStep() {
         💡 <strong>Batch Mode:</strong> Download multiple chapters (e.g., 1-5) and process them all together. You'll be able to switch between chapters to review each one's results.
       </div>
     </div>
-    
+
     <div class="form-group">
       <label class="form-label">Chapter Folder Path</label>
       <div style="display:flex; gap:8px;">
@@ -760,7 +760,7 @@ socket.on('step_complete', function _handleDownload(data) {
   const downloaded = result.downloaded || [];
   const resultEl = document.getElementById('downloadResult');
   const mangaName = (result.manga_name || 'Unknown');
-  
+
   if (resultEl && downloaded.length > 0) {
     resultEl.innerHTML = `
       <div style="margin-top:16px; padding:16px; background:var(--green-tint); border:2px solid var(--green); border-radius:8px;">
@@ -768,7 +768,7 @@ socket.on('step_complete', function _handleDownload(data) {
           <div class="badge badge-success" style="font-size:14px; font-weight:700; padding:6px 12px;">✓ Download complete</div>
           <div style="font-size:16px; font-weight:800; font-family:var(--font-display); color:var(--ink);">📚 ${esc(mangaName)}</div>
         </div>
-        
+
         <div style="background:var(--paper); padding:12px; border-radius:6px; border:1px solid var(--green); margin-bottom:12px;">
           <div style="font-size:13px; font-weight:600; color:var(--ink); margin-bottom:8px;">
             📊 Downloaded ${downloaded.length} chapter${downloaded.length > 1 ? 's' : ''} • ${result.total_images || 0} total images
@@ -780,7 +780,7 @@ socket.on('step_complete', function _handleDownload(data) {
             </div>
           `).join('')}
         </div>
-        
+
         ${downloaded.length > 1 ? `
           <div style="padding:12px; background:var(--blue-tint); border:1px solid var(--blue); border-radius:6px; margin-bottom:12px;">
             <div style="font-size:12px; font-weight:700; color:var(--blue); margin-bottom:4px;">🎯 Batch mode is on</div>
@@ -854,7 +854,7 @@ async function browseFolderForSource() {
   try {
     const response = await fetch('/api/browse-folder', { method: 'POST' });
     const data = await response.json();
-    
+
     if (data.path) {
       document.getElementById('inputSourceFolder').value = data.path;
       APP.sourceFolder = data.path;
@@ -1027,7 +1027,7 @@ function renderStitchStep() {
   const body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <p class="text-sm text-dim mb-1">Stitch pages into long strips, then detect and crop individual panels. You can manually adjust detection boxes.</p>
 
     <div class="zoom-controls" id="stitchZoomBar" style="display:none">
@@ -1141,7 +1141,7 @@ async function loadStitchedPreview() {
 
     const imgList = document.getElementById('stitchImgList');
     const overlay = document.getElementById('stitchOverlay');
-    
+
     // Clear only the images, preserve the overlay
     Array.from(imgList.children).forEach(child => {
       if (child !== overlay) {
@@ -1163,7 +1163,7 @@ async function loadStitchedPreview() {
         if (loadedCount === data.parts.length) {
           stitchNatW = firstW;
           stitchNatH = totalH;
-          
+
           document.getElementById('stitchImgInfo').textContent = `${stitchNatW} × ${stitchNatH}px`;
 
           // Load boxes from project state — per viewer target
@@ -1172,13 +1172,13 @@ async function loadStitchedPreview() {
             : (APP.projectData?.stitched_boxes_1 || APP.projectData?.stitched_boxes || []);
           if (boxes.length > 0) {
             stitchBoxes = boxes.map(b => ({...b}));
-            
+
             // Auto-remove overlaps after loading
             const removed = removeOverlappingBoxes(true);
             if (removed > 0) {
               toast(`Auto-removed ${removed} overlapping box${removed > 1 ? 'es' : ''} from detection`, 'info');
             }
-            
+
             renderStitchBoxes();
           }
         }
@@ -1194,7 +1194,7 @@ function toggleDrawMode() {
   const btn = document.getElementById('btnDrawMode');
   const hint = document.getElementById('drawModeHint');
   const overlay = document.getElementById('stitchOverlay');
-  
+
   if (drawMode) {
     btn.classList.add('active');
     btn.style.background = 'var(--red)';
@@ -1227,7 +1227,7 @@ function renderStitchBoxes() {
 
   document.getElementById('stitchBoxCount').textContent = `${stitchBoxes.length} detection boxes`;
   document.getElementById('stitchBoxCount').title = 'Click ✏️ Draw to add new boxes. Drag boxes to move them. Use corner/edge handles to resize. Click ✕ to delete.';
-  
+
   // Check for overlaps and update message
   let overlapCount = 0;
   for (let i = 0; i < stitchBoxes.length; i++) {
@@ -1237,11 +1237,11 @@ function renderStitchBoxes() {
       }
     }
   }
-  
+
   if (overlapCount > 0) {
     document.getElementById('stitchBoxCount').innerHTML = `${stitchBoxes.length} detection boxes <span style="color: var(--amber); font-weight: 600;">⚠️ ${overlapCount} overlap${overlapCount > 1 ? 's' : ''} detected</span>`;
   }
-  
+
   const hasBoxes = stitchBoxes.length > 0;
   document.getElementById('btnSaveBoxes').style.display = hasBoxes ? '' : 'none';
   const overlapBtn = document.getElementById('btnRemoveOverlaps');
@@ -1269,7 +1269,7 @@ function renderStitchBoxes() {
     b.className = hasOverlap ? 'detect-box overlapping' : 'detect-box';
     b.style.cssText = `left:${bx}%;top:${by}%;width:${bw}%;height:${bh}%`;
     b.dataset.idx = idx;
-    b.title = hasOverlap 
+    b.title = hasOverlap
       ? `Panel #${idx + 1} - ⚠️ OVERLAPPING - Drag to move, resize with handles, click ✕ to delete`
       : `Panel #${idx + 1} - Drag to move, resize with handles, click ✕ to delete`;
 
@@ -1401,7 +1401,7 @@ function removeOverlappingBoxes(auto = false) {
     if (!auto) toast('No boxes to check', 'info');
     return 0;
   }
-  
+
   // IoU-based Non-Maximum Suppression — remove smaller box when overlap > threshold
   const IOU_THRESHOLD = 0.30;
   const before = stitchBoxes.length;
@@ -1437,7 +1437,7 @@ function removeOverlappingBoxes(auto = false) {
     }
     renderStitchBoxes();
   }
-  
+
   return diff;
 }
 
@@ -1883,7 +1883,7 @@ function renderReviewStep() {
   const body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <p class="text-sm text-dim mb-1">Review cropped panels. Delete junk panels or crop unwanted content (e.g. "To be continued" sections).</p>
     <div id="panelReviewGrid" style="margin-top: 20px;">
       <div class="empty-state">
@@ -1933,12 +1933,12 @@ async function loadPanelReview() {
         const pid = p.panel_id || (i + 1);
         const filename = p.path ? p.path.split('/').pop() : `${String(pid).padStart(4, '0')}.jpg`;
         const imgUrl = `/api/panel-image/${encodeURIComponent(APP.projectName)}/${filename}?t=${Date.now()}`;
-        
+
         return `
           <div class="panel-review-card" id="review-card-${pid}" data-panel-id="${pid}" data-filename="${filename}">
             <div class="panel-badge">#${pid}</div>
-            <img src="${imgUrl}" 
-                 alt="Panel ${pid}" 
+            <img src="${imgUrl}"
+                 alt="Panel ${pid}"
                  style="width: 100%; height: auto; display: block; border-radius: 4px; min-height: 150px; object-fit: cover;"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div style="display: none; width: 100%; height: 200px; align-items: center; justify-content: center; background: var(--bg-secondary); border-radius: 4px; color: var(--text-dim); flex-direction: column; gap: 8px;">
@@ -1964,7 +1964,7 @@ async function loadPanelReview() {
 // ─── Delete Panel ───────────────────────────────────────
 async function deleteReviewPanel(pid, btn) {
   if (!confirm(`Delete Panel #${pid}? This will permanently remove the panel image.`)) return;
-  
+
   const card = document.getElementById(`review-card-${pid}`);
   if (card) card.classList.add('deleting');
 
@@ -1992,13 +1992,13 @@ let cropState = { panelId: null, filename: null, natW: 0, natH: 0, startX: 0, st
 
 function openCropModal(pid, filename) {
   cropState = { panelId: pid, filename, natW: 0, natH: 0, startX: 0, startY: 0, drawing: false, selection: null };
-  
+
   const imgUrl = `/api/panel-image/${encodeURIComponent(APP.projectName)}/${filename}?t=${Date.now()}`;
-  
+
   // Create modal overlay
   let overlay = document.getElementById('cropModalOverlay');
   if (overlay) overlay.remove();
-  
+
   overlay = document.createElement('div');
   overlay.id = 'cropModalOverlay';
   overlay.className = 'crop-modal-overlay';
@@ -2022,7 +2022,7 @@ function openCropModal(pid, filename) {
       <button class="btn btn-primary" id="btnApplyCrop" onclick="applyCrop()" disabled>✂️ Apply Crop</button>
     </div>
   `;
-  
+
   document.body.appendChild(overlay);
   document.body.style.overflow = 'hidden';
 }
@@ -2030,7 +2030,7 @@ function openCropModal(pid, filename) {
 function onCropImageLoad(img) {
   cropState.natW = img.naturalWidth;
   cropState.natH = img.naturalHeight;
-  
+
   const wrapper = document.getElementById('cropImageWrapper');
   wrapper.addEventListener('mousedown', cropMouseDown);
   wrapper.addEventListener('mousemove', cropMouseMove);
@@ -2042,15 +2042,15 @@ function cropMouseDown(e) {
   e.preventDefault();
   const wrapper = document.getElementById('cropImageWrapper');
   const rect = wrapper.getBoundingClientRect();
-  
+
   cropState.startX = e.clientX - rect.left;
   cropState.startY = e.clientY - rect.top;
   cropState.drawing = true;
-  
+
   // Remove existing selection
   const existing = wrapper.querySelector('.crop-selection');
   if (existing) existing.remove();
-  
+
   // Create selection box
   const sel = document.createElement('div');
   sel.className = 'crop-selection';
@@ -2067,15 +2067,15 @@ function cropMouseMove(e) {
   e.preventDefault();
   const wrapper = document.getElementById('cropImageWrapper');
   const rect = wrapper.getBoundingClientRect();
-  
+
   const curX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
   const curY = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-  
+
   const x = Math.min(cropState.startX, curX);
   const y = Math.min(cropState.startY, curY);
   const w = Math.abs(curX - cropState.startX);
   const h = Math.abs(curY - cropState.startY);
-  
+
   cropState.selection.style.left = x + 'px';
   cropState.selection.style.top = y + 'px';
   cropState.selection.style.width = w + 'px';
@@ -2085,7 +2085,7 @@ function cropMouseMove(e) {
 function cropMouseUp(e) {
   if (!cropState.drawing) return;
   cropState.drawing = false;
-  
+
   // Enable apply button if selection is large enough
   const sel = cropState.selection;
   if (sel) {
@@ -2107,27 +2107,27 @@ function resetCropSelection() {
 
 async function applyCrop() {
   if (!cropState.selection || !cropState.panelId) return;
-  
+
   const wrapper = document.getElementById('cropImageWrapper');
   const img = document.getElementById('cropModalImage');
   const sel = cropState.selection;
-  
+
   // Convert display coordinates to natural image coordinates
   const displayW = img.clientWidth;
   const displayH = img.clientHeight;
   const scaleX = cropState.natW / displayW;
   const scaleY = cropState.natH / displayH;
-  
+
   const x = Math.round(parseFloat(sel.style.left) * scaleX);
   const y = Math.round(parseFloat(sel.style.top) * scaleY);
   const w = Math.round(parseFloat(sel.style.width) * scaleX);
   const h = Math.round(parseFloat(sel.style.height) * scaleY);
-  
+
   if (w < 10 || h < 10) {
     toast('Selection too small', 'error');
     return;
   }
-  
+
   try {
     const resp = await fetch(`/api/panels/${encodeURIComponent(APP.projectName)}/${cropState.panelId}/crop`, {
       method: 'POST',
@@ -2138,11 +2138,11 @@ async function applyCrop() {
     if (resp.ok) {
       toast(`✅ Panel #${cropState.panelId} cropped to ${data.new_width}×${data.new_height}`, 'success');
       closeCropModal();
-      
+
       // Force reload project data to get fresh image paths
       APP.projectData = null;
       await loadProjectData(APP.projectName, true); // Force refresh
-      
+
       // Reload the current review step
       if (APP.currentStep === 'review') {
         loadPanelReview();
@@ -2393,15 +2393,15 @@ async function loadPanelTextReview() {
         const imgUrl = `/api/panel-image/${encodeURIComponent(APP.projectName)}/${filename}?t=${Date.now()}`;
         const text = p.text || p.dialogue || '';
         const hasText = text && text.trim();
-        
+
         return `
           <div style="border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: var(--bg-card); display: flex; flex-wrap: wrap; gap: 20px; align-items: start;">
             <div style="flex-shrink: 0; width: 200px;">
               <div style="background: rgba(0,0,0,0.7); color: white; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; margin-bottom: 12px; text-align: center;">
                 Panel #${pid}
               </div>
-              <img src="${imgUrl}" 
-                   alt="Panel ${pid}" 
+              <img src="${imgUrl}"
+                   alt="Panel ${pid}"
                    style="width: 100%; height: auto; display: block; border-radius: 8px; border: 2px solid var(--border);"
                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
               <div style="display: none; width: 100%; height: 200px; align-items: center; justify-content: center; background: var(--bg-secondary); border-radius: 8px; color: var(--text-dim); flex-direction: column; gap: 8px; border: 2px solid var(--border);">
@@ -2433,7 +2433,7 @@ function renderExtractStep() {
   const body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <p class="text-sm text-dim mb-2">
       Extract dialogue text from speech bubbles using AI vision (qwen2.5vl).
       This reads the text in each panel's speech bubbles.
@@ -2511,7 +2511,7 @@ function renderCleanStep() {
   const body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <p class="text-sm text-dim mb-2">
       Remove speech bubble text from panels to create clean artwork.
       These clean panels will be used in the final narrated video.
@@ -3253,11 +3253,11 @@ function renderTTSStep() {
   body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <p class="text-sm text-dim mb-2">
       Convert ${APP.mode === 'dialogue' ? 'extracted dialogue' : 'narration'} text to speech audio.
     </p>
-    
+
     <!-- TTS Engine Selection -->
     <div class="form-group">
       <label class="form-label">TTS Engine</label>
@@ -3361,7 +3361,7 @@ function renderTTSStep() {
 
 async function handleTTSEngineChange() {
   const engine = document.getElementById('ttsEngine').value;
-  
+
   // Show/hide ElevenLabs API key section
   const keySection = document.getElementById('elevenLabsKeySection');
   if (engine === 'elevenlabs') {
@@ -3393,14 +3393,14 @@ async function handleTTSEngineChange() {
 async function loadVoicesForEngine(engine) {
   const voiceSelect = document.getElementById('ttsVoice');
   const btnPreview = document.getElementById('btnPreview');
-  
+
   voiceSelect.innerHTML = '<option value="">Loading voices...</option>';
   voiceSelect.disabled = true;
   btnPreview.disabled = true;
 
   try {
     let voices = [];
-    
+
     if (engine === 'elevenlabs') {
       // Check if API key is set
       const response = await fetch('/api/elevenlabs/voices');
@@ -3469,7 +3469,7 @@ async function playVoicePreview() {
   const engine = document.getElementById('ttsEngine').value;
   const voice = document.getElementById('ttsVoice').value;
   const btnPreview = document.getElementById('btnPreview');
-  
+
   if (!voice) {
     toast('Please select a voice first', 'warning');
     return;
@@ -3485,7 +3485,7 @@ async function playVoicePreview() {
       // ElevenLabs voices have preview URLs
       const selectedOption = document.getElementById('ttsVoice').options[document.getElementById('ttsVoice').selectedIndex];
       previewUrl = selectedOption.getAttribute('data-preview');
-      
+
       if (!previewUrl) {
         toast('Preview not available for this voice', 'warning');
         return;
@@ -3493,16 +3493,16 @@ async function playVoicePreview() {
     } else {
       // Generate preview for Edge/Kokoro
       console.log('Requesting preview:', { engine, voice });
-      
+
       // Add timeout to prevent infinite loading
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
-      
+
       const response = await fetch('/api/tts/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          engine, 
+        body: JSON.stringify({
+          engine,
           voice,
           text: 'Hello! This is a preview of how I sound. I will be narrating your manhwa recap.'
         }),
@@ -3510,7 +3510,7 @@ async function playVoicePreview() {
       }).finally(() => clearTimeout(timeoutId));
 
       console.log('Preview response status:', response.status);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('Preview error:', errorData);
@@ -3519,11 +3519,11 @@ async function playVoicePreview() {
 
       const data = await response.json();
       console.log('Preview data:', data);
-      
+
       if (!data.success || !data.preview_url) {
         throw new Error('Invalid preview response');
       }
-      
+
       previewUrl = data.preview_url;
     }
 
@@ -3538,14 +3538,14 @@ async function playVoicePreview() {
 
   } catch (error) {
     console.error('Preview error:', error);
-    
+
     // Handle abort/timeout
     if (error.name === 'AbortError') {
       toast('Preview generation timed out. Please try again.', 'error');
     } else {
       const errorMsg = error.message || 'Failed to load preview';
       console.error('Error message:', errorMsg);
-      
+
       if (errorMsg.includes('not installed') || errorMsg.includes('Install with')) {
         toast('Kokoro TTS not installed locally. Please check the setup guide.', 'warning');
       } else {
@@ -3561,7 +3561,7 @@ async function playVoicePreview() {
 async function saveElevenLabsKey() {
   const apiKey = document.getElementById('elevenLabsApiKey').value.trim();
   const statusDiv = document.getElementById('elevenLabsKeyStatus');
-  
+
   if (!apiKey) {
     statusDiv.innerHTML = '<span style="color: var(--color-error);">⚠️ Please enter an API key</span>';
     return;
@@ -3597,7 +3597,7 @@ async function checkElevenLabsKeyStatus() {
   try {
     const response = await fetch('/api/tts/status');
     const status = await response.json();
-    
+
     if (status.elevenlabs_tts) {
       statusDiv.innerHTML = '<span style="color: var(--color-success);">✓ API key is configured</span>';
     } else {
@@ -3651,11 +3651,11 @@ function renderVideoStep() {
   const body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <p class="text-sm text-dim mb-2">
       Generate individual video clips for each panel with synchronized audio.
     </p>
-    
+
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Resolution</label>
@@ -3683,7 +3683,7 @@ function renderVideoStep() {
         </select>
       </div>
     </div>
-    
+
     <!-- Animation Controls -->
     <div style="margin-top: 16px; padding: 16px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border);">
       <div class="form-group">
@@ -3693,7 +3693,7 @@ function renderVideoStep() {
         </label>
         <div class="text-xs text-dim" style="margin-left: 26px;">Add dynamic camera movements to make clips more engaging</div>
       </div>
-      
+
       <div id="animationOptions" style="margin-top: 12px;">
         <div class="form-group">
           <label class="form-label">Animation Style</label>
@@ -3713,7 +3713,7 @@ function renderVideoStep() {
         </div>
       </div>
     </div>
-    
+
     <!-- Color Picker (hidden by default) -->
     <div id="colorPickerSection" class="hidden" style="margin-top: 12px; padding: 16px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border);">
       <div class="form-group">
@@ -3724,7 +3724,7 @@ function renderVideoStep() {
         </div>
       </div>
     </div>
-    
+
     <!-- Blur Opacity Slider (for blur+color mode) -->
     <div id="blurOpacitySection" class="hidden" style="margin-top: 12px; padding: 16px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border);">
       <div class="form-group">
@@ -3733,7 +3733,7 @@ function renderVideoStep() {
         <div class="text-xs text-dim">Opacity: <span id="opacityValue">50%</span></div>
       </div>
     </div>
-    
+
     <!-- Custom Background Upload -->
     <div id="customBgSection" class="hidden" style="margin-top: 12px; padding: 16px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border);">
       <div class="form-group">
@@ -3754,7 +3754,7 @@ function renderVideoStep() {
         <img id="bgPreviewImg" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--border);">
       </div>
     </div>
-    
+
     <!-- Custom Background Video Upload -->
     <div id="customBgVideoSection" class="hidden" style="margin-top: 12px; padding: 16px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border);">
       <div class="form-group">
@@ -3775,7 +3775,7 @@ function renderVideoStep() {
         <video id="bgVideoPreviewVid" controls style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 2px solid var(--border);"></video>
       </div>
     </div>
-    
+
     <div class="progress-container hidden" id="videoProgress">
       <div class="progress-bar-wrap"><div class="progress-bar-fill" id="videoProgressBar"></div></div>
       <div class="progress-label">
@@ -3792,7 +3792,7 @@ function renderVideoStep() {
         🎬 Generate Clips
       </button>
     </div>`;
-  
+
   // Sync color input with hex input
   document.getElementById('bgColor').addEventListener('input', (e) => {
     document.getElementById('bgColorHex').value = e.target.value;
@@ -3803,7 +3803,7 @@ function handleAnimationToggle() {
   const enabled = document.getElementById('enableAnimations').checked;
   const optionsDiv = document.getElementById('animationOptions');
   const animationSelect = document.getElementById('animationStyle');
-  
+
   if (enabled) {
     optionsDiv.classList.remove('hidden');
     optionsDiv.style.display = 'block';
@@ -3821,13 +3821,13 @@ function handleBgModeChange() {
   const blurOpacitySection = document.getElementById('blurOpacitySection');
   const customBgSection = document.getElementById('customBgSection');
   const customBgVideoSection = document.getElementById('customBgVideoSection');
-  
+
   // Hide all sections
   colorSection.classList.add('hidden');
   blurOpacitySection.classList.add('hidden');
   customBgSection.classList.add('hidden');
   customBgVideoSection.classList.add('hidden');
-  
+
   // Show relevant sections
   if (mode === 'color') {
     colorSection.classList.remove('hidden');
@@ -3843,34 +3843,34 @@ function handleBgModeChange() {
 
 async function handleCustomBgUpload(input) {
   if (!input.files || !input.files[0]) return;
-  
+
   const file = input.files[0];
-  
+
   // Update button text
   document.getElementById('bgFileName').textContent = file.name;
-  
+
   const formData = new FormData();
   formData.append('file', file);
-  
+
   try {
     const response = await fetch('/api/assets/backgrounds/upload', {
       method: 'POST',
       body: formData
     });
-    
+
     if (!response.ok) throw new Error('Upload failed');
-    
+
     const data = await response.json();
-    
+
     // Show preview
     const preview = document.getElementById('bgPreview');
     const previewImg = document.getElementById('bgPreviewImg');
     previewImg.src = URL.createObjectURL(file);
     preview.classList.remove('hidden');
-    
+
     // Store filename for video generation
     input.setAttribute('data-filename', data.filename);
-    
+
     toast('Background uploaded successfully', 'success');
   } catch (error) {
     toast('Failed to upload background: ' + error.message, 'error');
@@ -3879,34 +3879,34 @@ async function handleCustomBgUpload(input) {
 
 async function handleCustomBgVideoUpload(input) {
   if (!input.files || !input.files[0]) return;
-  
+
   const file = input.files[0];
-  
+
   // Update button text
   document.getElementById('bgVideoFileName').textContent = file.name;
-  
+
   const formData = new FormData();
   formData.append('file', file);
-  
+
   try {
     const response = await fetch('/api/assets/backgrounds/upload', {
       method: 'POST',
       body: formData
     });
-    
+
     if (!response.ok) throw new Error('Upload failed');
-    
+
     const data = await response.json();
-    
+
     // Show preview
     const preview = document.getElementById('bgVideoPreview');
     const previewVid = document.getElementById('bgVideoPreviewVid');
     previewVid.src = URL.createObjectURL(file);
     preview.classList.remove('hidden');
-    
+
     // Store filename for video generation
     input.setAttribute('data-filename', data.filename);
-    
+
     toast('Background video uploaded successfully', 'success');
   } catch (error) {
     toast('Failed to upload background video: ' + error.message, 'error');
@@ -3920,14 +3920,14 @@ async function runVideo() {
   const bgMode = document.getElementById('videoBg')?.value || 'blur';
   const enableAnimations = document.getElementById('enableAnimations')?.checked !== false;
   const animationStyle = enableAnimations ? (document.getElementById('animationStyle')?.value || 'random') : 'none';
-  
+
   const settings = {
     pipeline_mode: APP.mode || 'dialogue',
     video_resolution: document.getElementById('videoRes')?.value || '1080p',
     bg_mode: bgMode,
     animation_style: animationStyle,
   };
-  
+
   // Add background-specific settings
   if (bgMode === 'color' || bgMode === 'blur_color') {
     settings.bg_color = document.getElementById('bgColor')?.value || '#000000';
@@ -3965,7 +3965,7 @@ function renderReviewClipsStep() {
   const body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <p class="text-sm text-dim mb-2">
       Preview and download individual video clips for each panel.
     </p>
@@ -3979,17 +3979,17 @@ function renderReviewClipsStep() {
     <div class="step-actions-right">
       <button class="btn btn-primary" onclick="nextStep()">✓ Done</button>
     </div>`;
-  
+
   loadVideoClips();
 }
 
 async function loadVideoClips() {
   const container = document.getElementById('clipsContainer');
-  
+
   try {
     const response = await fetch(`/api/clips/${encodeURIComponent(APP.projectName)}`);
     const data = await response.json();
-    
+
     if (!data.clips || data.clips.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
@@ -3998,7 +3998,7 @@ async function loadVideoClips() {
         </div>`;
       return;
     }
-    
+
     container.innerHTML = `
       <div class="clips-stats" style="padding: 16px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 16px; display: flex; gap: 24px; align-items: center;">
         <div>
@@ -4019,8 +4019,8 @@ async function loadVideoClips() {
         ${data.clips.map(clip => `
           <div class="clip-card" style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 1px solid var(--border);">
             <div class="clip-video" style="position: relative; aspect-ratio: 16/9; background: #000;">
-              <video 
-                controls 
+              <video
+                controls
                 preload="metadata"
                 style="width: 100%; height: 100%; object-fit: contain;"
                 src="${clip.url}">
@@ -4035,8 +4035,8 @@ async function loadVideoClips() {
               </div>
               <div class="clip-meta" style="display: flex; justify-content: space-between; align-items: center;">
                 <span class="text-xs text-dim">${clip.duration ? formatDuration(clip.duration) : 'N/A'}</span>
-                <a 
-                  href="${clip.url}" 
+                <a
+                  href="${clip.url}"
                   download="${clip.clip_filename}"
                   class="btn btn-sm btn-ghost"
                   style="padding: 4px 12px; font-size: 12px;">
@@ -4048,7 +4048,7 @@ async function loadVideoClips() {
         `).join('')}
       </div>
     `;
-    
+
   } catch (error) {
     container.innerHTML = `
       <div class="error-state">
@@ -4092,13 +4092,13 @@ function downloadAllClips() {
 // ─── Batch Mode Toggle ──────────────────────────────────
 function setBatchMode(isBatch) {
   APP.userBatchMode = isBatch;
-  
+
   // Show/hide batch mode hint
   const hint = document.getElementById('batchModeHint');
   if (hint) {
     hint.style.display = isBatch ? 'block' : 'none';
   }
-  
+
   // Update radio button styling
   const labels = document.querySelectorAll('.radio-option');
   labels.forEach(label => {
@@ -4113,7 +4113,7 @@ function setBatchMode(isBatch) {
       }
     }
   });
-  
+
   console.log('[Batch Mode] User selected:', isBatch ? 'BATCH' : 'SINGLE');
 }
 
@@ -4141,7 +4141,7 @@ async function loadProjectData(name) {
     const r = await fetch(`/api/projects/${encodeURIComponent(name)}`);
     if (r.ok) {
       APP.projectData = await r.json();
-      
+
       // DEBUG: Log received project data
       console.log('[DEBUG] loadProjectData received:', {
         manhwa_name: APP.projectData.manhwa_name,
@@ -4149,7 +4149,7 @@ async function loadProjectData(name) {
         is_batch: APP.projectData.is_batch,
         chapter_list: APP.projectData.chapter_list
       });
-      
+
       // Update chapter navigation state from project data
       if (APP.projectData) {
         APP.manhwaName = APP.projectData.manhwa_name || '';
@@ -4170,7 +4170,7 @@ async function loadProjectData(name) {
         updateChapterNavUI();
       }
     }
-  } catch (e) { 
+  } catch (e) {
     console.error('[DEBUG] loadProjectData error:', e);
   }
 }
@@ -4402,66 +4402,66 @@ function renderSortClipsStep() {
   const body = document.getElementById('stepBody');
   body.innerHTML = `
     <div id="chapterNavSlot">${renderChapterNavigation()}</div>
-    
+
     <p class="text-sm text-dim mb-3">
       Organize clips from multiple chapters into sequential folders for easier editing in CapCut or other video editors.
     </p>
-    
+
     <div class="sort-clips-container" style="display: flex; flex-direction: column; gap: 20px;">
       <!-- Add New Sort Job -->
       <div class="card" style="padding: 20px; background: var(--bg-secondary); border-radius: 12px;">
         <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">
           📂 Create New Sort Job
         </h3>
-        
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
           <div>
             <label class="text-xs text-dim" style="display: block; margin-bottom: 6px;">Output Folder</label>
-            <input 
-              type="text" 
-              id="sortOutputFolder" 
+            <input
+              type="text"
+              id="sortOutputFolder"
               placeholder="e.g., /path/to/output/batch1"
               style="width: 100%; padding: 10px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
-            <button 
-              class="btn btn-sm btn-ghost" 
+            <button
+              class="btn btn-sm btn-ghost"
               onclick="browseFolderForSort()"
               style="margin-top: 6px; font-size: 12px;">
               📁 Browse...
             </button>
           </div>
-          
+
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div>
               <label class="text-xs text-dim" style="display: block; margin-bottom: 6px;">Start Chapter</label>
-              <input 
-                type="number" 
-                id="sortStartChapter" 
-                min="1" 
+              <input
+                type="number"
+                id="sortStartChapter"
+                min="1"
                 value="1"
                 placeholder="1"
                 style="width: 100%; padding: 10px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
             </div>
             <div>
               <label class="text-xs text-dim" style="display: block; margin-bottom: 6px;">End Chapter</label>
-              <input 
-                type="number" 
-                id="sortEndChapter" 
-                min="1" 
+              <input
+                type="number"
+                id="sortEndChapter"
+                min="1"
                 value="5"
                 placeholder="5"
                 style="width: 100%; padding: 10px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
             </div>
           </div>
         </div>
-        
-        <button 
-          class="btn btn-primary" 
+
+        <button
+          class="btn btn-primary"
           onclick="addSortJob()"
           style="width: 100%;">
           ➕ Add Sort Job
         </button>
       </div>
-      
+
       <!-- Sort Jobs List -->
       <div id="sortJobsList"></div>
     </div>
@@ -4486,7 +4486,7 @@ function finishProject() {
 function browseFolderForSort() {
   // Use backend API to get a folder path via system dialog
   toast('Opening folder picker...', 'info');
-  
+
   fetch('/api/browse-folder', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -4513,28 +4513,28 @@ function addSortJob() {
   const outputFolder = document.getElementById('sortOutputFolder').value.trim();
   const startChapter = parseInt(document.getElementById('sortStartChapter').value);
   const endChapter = parseInt(document.getElementById('sortEndChapter').value);
-  
+
   if (!outputFolder) {
     toast('Please enter an output folder path', 'warning');
     return;
   }
-  
+
   if (startChapter > endChapter) {
     toast('Start chapter must be less than or equal to end chapter', 'warning');
     return;
   }
-  
+
   // Check if range already exists in a job
-  const overlap = sortJobs.find(j => 
+  const overlap = sortJobs.find(j =>
     (startChapter >= j.startChapter && startChapter <= j.endChapter) ||
     (endChapter >= j.startChapter && endChapter <= j.endChapter)
   );
-  
+
   if (overlap) {
     toast(`Chapter range ${startChapter}-${endChapter} overlaps with existing job (${overlap.startChapter}-${overlap.endChapter})`, 'warning');
     return;
   }
-  
+
   const job = {
     id: Date.now(),
     outputFolder,
@@ -4546,21 +4546,21 @@ function addSortJob() {
     totalClips: 0,
     copiedClips: 0
   };
-  
+
   sortJobs.push(job);
   toast(`✅ Added sort job: Chapters ${startChapter}-${endChapter}`, 'success');
-  
+
   // Clear inputs
   document.getElementById('sortOutputFolder').value = '';
   document.getElementById('sortStartChapter').value = endChapter + 1;
   document.getElementById('sortEndChapter').value = endChapter + 5;
-  
+
   renderSortJobsList();
 }
 
 function renderSortJobsList() {
   const container = document.getElementById('sortJobsList');
-  
+
   if (sortJobs.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
@@ -4569,13 +4569,13 @@ function renderSortJobsList() {
       </div>`;
     return;
   }
-  
+
   container.innerHTML = sortJobs.map(job => `
     <div class="card" style="padding: 20px; background: var(--bg-secondary); border-radius: 12px; border-left: 4px solid ${job.completed ? 'var(--color-success)' : job.status === 'running' ? 'var(--color-warning)' : 'var(--border)'};">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div>
           <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">
-            ${job.completed ? '✓' : job.status === 'running' ? '⏳' : '📋'} 
+            ${job.completed ? '✓' : job.status === 'running' ? '⏳' : '📋'}
             Chapters ${job.startChapter} - ${job.endChapter}
           </div>
           <div class="text-xs text-dim">
@@ -4584,16 +4584,16 @@ function renderSortJobsList() {
         </div>
         <div style="display: flex; gap: 8px;">
           ${!job.completed && job.status !== 'running' ? `
-            <button 
-              class="btn btn-sm btn-primary" 
+            <button
+              class="btn btn-sm btn-primary"
               onclick="executeSortJob(${job.id})"
               title="Start sorting">
               ▶ Start
             </button>
           ` : ''}
           ${job.status !== 'running' ? `
-            <button 
-              class="btn btn-sm btn-ghost" 
+            <button
+              class="btn btn-sm btn-ghost"
               onclick="removeSortJob(${job.id})"
               title="Remove job">
               🗑️
@@ -4601,7 +4601,7 @@ function renderSortJobsList() {
           ` : ''}
         </div>
       </div>
-      
+
       ${job.status === 'running' || job.completed ? `
         <div style="background: var(--bg-primary); border-radius: 6px; padding: 12px; margin-top: 12px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
@@ -4626,11 +4626,11 @@ function removeSortJob(jobId) {
 async function executeSortJob(jobId) {
   const job = sortJobs.find(j => j.id === jobId);
   if (!job) return;
-  
+
   job.status = 'running';
   job.progress = 0;
   renderSortJobsList();
-  
+
   try {
     const response = await fetch('/api/sort-clips', {
       method: 'POST',
@@ -4641,9 +4641,9 @@ async function executeSortJob(jobId) {
         end_chapter: job.endChapter
       })
     });
-    
+
     const data = await response.json();
-    
+
     if (response.ok) {
       job.completed = true;
       job.status = 'completed';
@@ -4651,7 +4651,7 @@ async function executeSortJob(jobId) {
       job.totalClips = data.total_clips;
       job.copiedClips = data.copied_clips;
       toast(`✅ Sorted ${data.copied_clips} clips from chapters ${job.startChapter}-${job.endChapter}`, 'success');
-      
+
       // Auto-advance progress for visual feedback
       let progressStep = 0;
       const progressInterval = setInterval(() => {
@@ -4671,7 +4671,7 @@ async function executeSortJob(jobId) {
     job.status = 'error';
     toast(`❌ Sort failed: ${error.message}`, 'error');
   }
-  
+
   renderSortJobsList();
 }
 
@@ -4693,17 +4693,17 @@ function renderChapterNavigation() {
   console.log('[DEBUG] APP.chapterList.length:', APP.chapterList?.length);
   console.log('[DEBUG] APP.currentChapter:', APP.currentChapter);
   console.log('[DEBUG] APP.manhwaName:', APP.manhwaName);
-  
+
   // Show navigation if:
   // 1. User explicitly enabled batch mode (userBatchMode = true), OR
   // 2. Backend detected batch mode (isBatch = true) AND we have multiple chapters
   const shouldShowNav = APP.userBatchMode || (APP.isBatch && APP.chapterList.length > 1);
-  
+
   if (!shouldShowNav) {
     console.log('[DEBUG] No navigation - userBatchMode:', APP.userBatchMode, 'isBatch:', APP.isBatch, 'chapterCount:', APP.chapterList?.length);
     return ''; // No navigation needed
   }
-  
+
   // Clamp the index — a stale current_chapter (e.g. 0) may not be in the list
   const idx = APP.chapterList.indexOf(APP.currentChapter);
   const currentIdx = idx >= 0 ? idx : 0;
@@ -4735,10 +4735,10 @@ async function switchChapter(direction) {
     toast('Cannot switch chapters while a step is running', 'warning');
     return;
   }
-  
+
   const currentIdx = APP.chapterList.indexOf(APP.currentChapter);
   let newIdx = currentIdx;
-  
+
   if (direction === 'prev' && currentIdx > 0) {
     newIdx = currentIdx - 1;
   } else if (direction === 'next' && currentIdx < APP.chapterList.length - 1) {
@@ -4746,9 +4746,9 @@ async function switchChapter(direction) {
   } else {
     return; // No change
   }
-  
+
   const newChapter = APP.chapterList[newIdx];
-  
+
   try {
     // Call backend to switch chapter in state
     const resp = await fetch('/api/switch-chapter', {
@@ -4759,16 +4759,16 @@ async function switchChapter(direction) {
         chapter_num: newChapter
       })
     });
-    
+
     if (!resp.ok) {
       const err = await resp.json();
       toast(`Failed to switch chapter: ${err.error}`, 'error');
       return;
     }
-    
+
     // Get updated chapter state from response
     const data = await resp.json();
-    
+
     // Update APP state with new chapter data
     APP.currentChapter = data.current_chapter;
     APP.manhwaName = data.manhwa_name;
@@ -4786,20 +4786,20 @@ async function switchChapter(direction) {
 
     // Reload full project data to ensure consistency
     await loadProjectData(APP.projectName);
-    
+
     // Re-render current step with new chapter data
     renderStepContent();
-    
+
     // If on stitch step, reload stitched preview
     if (APP.currentStep === 'stitch') {
       loadStitchedPreview();
     }
-    
+
     // If on review step, reload panels
     if (APP.currentStep === 'review') {
       loadPanelReview();
     }
-    
+
     toast(`Switched to Chapter ${String(newChapter).padStart(5, '0')}`, 'success');
   } catch (error) {
     toast(`Error switching chapter: ${error.message}`, 'error');

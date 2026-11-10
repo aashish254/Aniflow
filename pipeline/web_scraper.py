@@ -866,7 +866,7 @@ def _download_image(img_url, save_path, referer):
 def download_chapters(manga_url, chapters, progress_callback=None):
     """
     Download selected chapters into organized folder structure.
-    
+
     New structure: manhwa_download/{sanitized_manga_name}/Chapter_{num:05d}/
 
     Args:
@@ -884,7 +884,7 @@ def download_chapters(manga_url, chapters, progress_callback=None):
     """
     info = analyze_url(manga_url)
     manga_name_raw = info['manga_name'] or _extract_manga_slug(manga_url).replace('-', ' ').title()
-    
+
     # Sanitize manhwa name for folder paths (spaces to hyphens, remove special chars)
     manga_name = config.sanitize_manhwa_name(manga_name_raw)
 
@@ -903,13 +903,13 @@ def download_chapters(manga_url, chapters, progress_callback=None):
     for idx, ch in enumerate(chapters):
         ch_num = ch['number']
         ch_url = ch['url']
-        
+
         # Use 5-digit chapter numbering (supports 99,999 chapters)
         try:
             chapter_int = int(float(ch_num))  # Handle "23.5" as 23
         except:
             chapter_int = idx + 1  # Fallback to index
-        
+
         ch_dir = os.path.join(manga_dir, f"Chapter_{chapter_int:05d}")
         os.makedirs(ch_dir, exist_ok=True)
 

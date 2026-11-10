@@ -7,7 +7,7 @@ aiofiles>=23.0
 opencv-python>=4.8
 Pillow>=10.0
 numpy>=1.24
-moviepy>=2.0
+moviepy>=2.2.1
 
 # ─── TTS ──────────────────────────────────────────────
 edge-tts>=6.1          # default narrator voice (free)

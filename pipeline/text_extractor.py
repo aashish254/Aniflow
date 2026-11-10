@@ -61,11 +61,11 @@ def extract_text_all_panels(panels: list[dict], state,
 
     total = len(panels)
     txt_lines = []
-    
+
     import cv2
     import os
     import json
-    
+
     # Map stitched_boxes by panel ID if available
     box_map = {}
     if stitched_boxes:
@@ -115,7 +115,7 @@ def extract_text_all_panels(panels: list[dict], state,
         txt_lines.append(f"[PANEL {panel_id}]")
         txt_lines.append(panel['text'] if panel['text'] else "(no dialogue)")
         txt_lines.append("")
-        
+
         extracted_data.append({
             'panel_id': panel_id,
             'text': panel['text'],
@@ -125,12 +125,12 @@ def extract_text_all_panels(panels: list[dict], state,
 
     # Save to new organized structure: manhwa_text/{name}/Chapter_{num:05d}/
     os.makedirs(state.text_dir, exist_ok=True)
-    
+
     # Save as plain text
     txt_path = os.path.join(state.text_dir, "extracted_text.txt")
     with open(txt_path, 'w', encoding='utf-8') as f:
         f.write('\n'.join(txt_lines))
-    
+
     # Save as JSON with full metadata
     json_path = os.path.join(state.text_dir, "extracted_text.json")
     with open(json_path, 'w', encoding='utf-8') as f:
@@ -357,7 +357,7 @@ def _parse_vision_response(raw: str) -> tuple[str, str]:
         line = re.sub(r'^(?:Speaker|Narrator|Unknown|Character)\s*[:：]\s*', '', line, flags=re.IGNORECASE)
         if not line:
             continue
-        
+
         # FILTER OUT NON-ENGLISH CHARACTERS
         # Remove any Korean (Hangul) characters: U+AC00 to U+D7AF
         # Remove any Chinese/Japanese (CJK Unified Ideographs): U+4E00 to U+9FFF
@@ -365,22 +365,22 @@ def _parse_vision_response(raw: str) -> tuple[str, str]:
         # Remove Japanese Katakana: U+30A0 to U+30FF
         line = re.sub(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF]+', '', line)
         line = line.strip()
-        
+
         # Skip if line is now empty after filtering
         if not line:
             continue
-            
+
         # Skip lines that are mostly symbols/punctuation (curse symbols, sfx)
         # e.g. "#@$!!", "%&?!", "***", "!!!", "..."
         alpha_chars = sum(1 for c in line if c.isalpha())
         if alpha_chars < 2:
             continue
-            
+
         # Additional check: ensure at least 50% of alphabetic characters are Latin (English)
         latin_chars = sum(1 for c in line if c.isalpha() and ord(c) < 0x0370)  # Latin range
         if alpha_chars > 0 and latin_chars / alpha_chars < 0.5:
             continue
-            
+
         text_lines.append(line)
 
     return '\n'.join(text_lines), visual_part.strip()

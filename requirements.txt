@@ -4,7 +4,7 @@ flask-socketio>=5.3
 aiofiles>=23.0
 
 # ─── Image / video processing ─────────────────────────
-opencv-python>=4.8
+opencv-python>=5.0.0.93
 Pillow>=10.0
 numpy>=1.24
 moviepy>=2.2.1

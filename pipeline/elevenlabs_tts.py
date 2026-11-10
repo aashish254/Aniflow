@@ -109,7 +109,7 @@ class ElevenLabsTTS:
     def get_voices(self, force_refresh: bool = False) -> list[dict]:
         """
         Get available ElevenLabs voices.
-        
+
         Returns list of voice dicts with: voice_id, name, preview_url, labels, etc.
         """
         if not self.api_key:
@@ -166,7 +166,7 @@ class ElevenLabsTTS:
     def test_api_key(self) -> tuple[bool, str]:
         """
         Test if the API key is valid.
-        
+
         Returns:
             (success: bool, message: str)
         """

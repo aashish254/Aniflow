@@ -40,12 +40,12 @@ KOKORO_VOICES_PATH = None
 try:
     from kokoro_onnx import Kokoro
     import soundfile as sf
-    
+
     # Check for model and voices files
     model_dir = os.path.expanduser("~/.local/share/kokoro")
     model_file = os.path.join(model_dir, "kokoro-v1_0.onnx")
     voices_file = os.path.join(model_dir, "voices.npy")
-    
+
     if os.path.exists(model_file) and os.path.exists(voices_file):
         KOKORO_MODEL_PATH = model_file
         KOKORO_VOICES_PATH = voices_file
@@ -92,7 +92,7 @@ class KokoroTTS:
             _patch_numpy_load()
             try:
                 self._kokoro_instance = Kokoro(KOKORO_MODEL_PATH, KOKORO_VOICES_PATH)
-                
+
                 # Monkey-patch _style_for to return 2D arrays (model expects rank 2)
                 original_style_for = self._kokoro_instance._style_for
                 def patched_style_for(voice, length):
@@ -102,7 +102,7 @@ class KokoroTTS:
                         style = style.reshape(1, -1)
                     return style
                 self._kokoro_instance._style_for = patched_style_for
-                
+
             finally:
                 _unpatch_numpy_load()
 
@@ -113,7 +113,7 @@ class KokoroTTS:
             if getattr(config, 'SPEED_MODE', False) and \
                     getattr(config, 'SPEED_SETTINGS', {}).get('kokoro_gpu', True):
                 self._try_move_to_mps()
-                
+
         return self._kokoro_instance
 
     def _try_move_to_mps(self):
@@ -190,7 +190,7 @@ class KokoroTTS:
                 '-codec:a', 'libmp3lame', '-qscale:a', '2',
                 mp3_path
             ], stdin=subprocess.DEVNULL, capture_output=True, timeout=10, check=False)
-            
+
             # Check if conversion succeeded
             if result.returncode == 0 and os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 0:
                 # Clean up WAV

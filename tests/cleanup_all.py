@@ -5,7 +5,7 @@ import os
 # Folders to clean completely
 folders_to_clean = [
     'manhwa_download',
-    'manhwa_stitch', 
+    'manhwa_stitch',
     'manhwa_detect',
     'manhwa_crop',
     'manhwa_text',

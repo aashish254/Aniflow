@@ -10,7 +10,7 @@ numpy>=1.24
 moviepy>=2.2.1
 
 # ─── TTS ──────────────────────────────────────────────
-edge-tts>=6.1          # default narrator voice (free)
+edge-tts>=7.3.1          # default narrator voice (free)
 
 # ─── Web scraping / chapter downloads ─────────────────
 requests>=2.31

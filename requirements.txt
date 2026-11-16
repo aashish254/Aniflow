@@ -21,7 +21,7 @@ cloudscraper>=1.2
 DrissionPage>=4.1      # headless-browser fallback for protected sites
 
 # ─── Panel detection (YOLO) ───────────────────────────
-ultralytics>=8.4
+ultralytics>=8.4.212
 torch>=2.0
 torchvision>=0.15
 

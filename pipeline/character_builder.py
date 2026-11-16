@@ -358,7 +358,7 @@ def find_similar_faces(session_id, reference_index, all_faces, threshold=0.72):
         return []
 
     ref_img = cv2.resize(ref_img, (128, 128))
-    
+
     # --- Compute reference features ---
     ref_features = _compute_face_features(ref_img)
 
@@ -384,7 +384,7 @@ def find_similar_faces(session_id, reference_index, all_faces, threshold=0.72):
         score_hair = cv2.compareHist(ref_features['hair_hist'], cand_features['hair_hist'], cv2.HISTCMP_CORREL)
         score_face = cv2.compareHist(ref_features['face_hist'], cand_features['face_hist'], cv2.HISTCMP_CORREL)
         score_hair_v = cv2.compareHist(ref_features['hair_val'], cand_features['hair_val'], cv2.HISTCMP_CORREL)
-        
+
         # Perceptual hash distance (0-1 where 1 = identical)
         hash_dist = 1.0 - (bin(ref_features['phash'] ^ cand_features['phash']).count('1') / 64.0)
 
@@ -405,26 +405,26 @@ def _compute_face_features(img):
     """Compute features for face comparison: hair region, face region, perceptual hash."""
     import cv2
     import numpy as np
-    
+
     h, w = img.shape[:2]
     hair_region = img[0:int(h*0.4), :]        # Top 40% = hair
     face_region = img[int(h*0.4):, :]          # Bottom 60% = face/skin
-    
+
     hsv_hair = cv2.cvtColor(hair_region, cv2.COLOR_BGR2HSV)
     hsv_face = cv2.cvtColor(face_region, cv2.COLOR_BGR2HSV)
-    
+
     # Hair hue histogram (color)
     hair_hist = cv2.calcHist([hsv_hair], [0], None, [60], [0, 180])
     cv2.normalize(hair_hist, hair_hist)
-    
+
     # Hair value histogram (brightness - distinguishes dark vs light hair)
     hair_val = cv2.calcHist([hsv_hair], [2], None, [40], [0, 256])
     cv2.normalize(hair_val, hair_val)
-    
+
     # Face hue histogram
     face_hist = cv2.calcHist([hsv_face], [0, 1], None, [30, 30], [0, 180, 0, 256])
     cv2.normalize(face_hist, face_hist)
-    
+
     # Perceptual hash (dHash - difference hash)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     small = cv2.resize(gray, (9, 8))
@@ -432,10 +432,10 @@ def _compute_face_features(img):
     for row in range(8):
         for col in range(8):
             phash = (phash << 1) | (1 if small[row, col] > small[row, col+1] else 0)
-    
+
     return {
         'hair_hist': hair_hist,
-        'hair_val': hair_val, 
+        'hair_val': hair_val,
         'face_hist': face_hist,
         'phash': phash
     }

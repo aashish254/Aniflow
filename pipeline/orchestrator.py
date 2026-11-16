@@ -65,7 +65,7 @@ class PipelineState:
     """
     State manager for batch manhwa chapter processing.
     Supports both single chapter and multi-chapter batch operations.
-    
+
     New organized folder structure:
       manhwa_download/{manhwa_name}/Chapter_{num:05d}/
       manhwa_stitch/{manhwa_name}/Chapter_{num:05d}/
@@ -75,7 +75,7 @@ class PipelineState:
       manhwa_audio/{manhwa_name}/Chapter_{num:05d}/
       manhwa_clips/{manhwa_name}/Chapter_{num:05d}/
     """
-    
+
     STAGES = ['init', 'loaded', 'stitched', 'detected1', 'cropped1', 'stitched2',
               'detected2', 'cropped2', 'text_extracted',
               'text_removed', 'narrated', 'audio_done', 'video_done', 'clips_done']
@@ -86,13 +86,13 @@ class PipelineState:
         # phantom empty project.
         project_name = _resolve_existing_project_name(project_name)
         self.project_name = project_name
-        
+
         # Parse project name: "Manhwa-Name__Chapter_00001" or "Manhwa-Name__Chapters_00001-00005"
         if "__Chapter" in project_name:
             parts = project_name.split("__")
             self.manhwa_name = parts[0]
             chapter_part = parts[1]
-            
+
             if chapter_part.startswith("Chapters_"):
                 # Batch mode: "Chapters_00001-00005"
                 range_str = chapter_part.replace("Chapters_", "")
@@ -115,17 +115,17 @@ class PipelineState:
             # Try to extract from source_folder path if available
             # Expected format: .../manhwa_download/{ManhwaName}/Chapter_XXXXX/
             self.manhwa_name = project_name  # Use project name as manhwa title
-            
+
             # Will be updated when source_folder is set via set_source()
             self.current_chapter = 0
             self.start_chapter = 0
             self.end_chapter = 0
             self.is_batch = False
             self.chapter_list = [0]
-        
+
         # Get paths for current chapter using new organized structure
         self.paths = config.get_manhwa_paths(self.manhwa_name, self.current_chapter)
-        
+
         # Primary directories (new structure)
         self.download_dir = self.paths['download']
         self.stitch_dir = self.paths['stitch']
@@ -135,12 +135,12 @@ class PipelineState:
         self.audio_dir = self.paths['audio']
         self.clips_dir = self.paths['clips']
         self.state_file = self.paths['state']
-        
+
         # Legacy compatibility paths
         self.project_dir = self.crop_dir  # Points to manhwa_crop/...
         self.raw_dir = self.download_dir  # Points to manhwa_download/...
         self.stitched_dir = self.stitch_dir
-        
+
         # Per-chapter state
         self.stage = 'init'
         self.raw_pages = []
@@ -160,10 +160,10 @@ class PipelineState:
         self.video_clips = []  # List of generated clip metadata
         self.boxes1_cropped_hash = ""
         self.boxes2_cropped_hash = ""
-        
+
         # Batch processing state
         self.batch_progress = {}  # {chapter_num: {'stage': 'done', 'error': None}}
-        
+
         self.settings = {
             'tts_voice': config.TTS_VOICE,
             'tts_rate': config.TTS_RATE,
@@ -187,7 +187,7 @@ class PipelineState:
             'panel_method': getattr(config, 'DEFAULT_PANEL_EXTRACTION_METHOD', 'yolo'),
             'ocr_engine': getattr(config, 'DEFAULT_TEXT_EXTRACTION_METHOD', 'magi'),
         }
-        
+
         # Create directories
         os.makedirs(self.download_dir, exist_ok=True)
         os.makedirs(self.stitch_dir, exist_ok=True)
@@ -196,18 +196,18 @@ class PipelineState:
         os.makedirs(self.text_dir, exist_ok=True)
         os.makedirs(self.audio_dir, exist_ok=True)
         os.makedirs(self.clips_dir, exist_ok=True)
-    
+
     def set_source(self, source_folder: str):
         """Set source folder and auto-detect manhwa name, chapter number, and batch mode."""
         self.source_folder = source_folder
-        
+
         # Try to extract chapter info from path
         # Expected: .../manhwa_download/{ManhwaName}/Chapter_XXXXX/
         import re
         from pathlib import Path
-        
+
         path = Path(source_folder)
-        
+
         # Look for Chapter_XXXXX pattern in path
         chapter_match = re.search(r'Chapter_(\d+)', str(path))
         if chapter_match:
@@ -216,7 +216,7 @@ class PipelineState:
             self.start_chapter = detected_chapter
             self.end_chapter = detected_chapter
             self.chapter_list = [detected_chapter]
-            
+
             # Try to find manhwa name (parent of Chapter_XXX folder)
             if 'Chapter_' in path.name:
                 # path is the Chapter folder itself
@@ -229,13 +229,13 @@ class PipelineState:
                         break
                 else:
                     manhwa_folder = path.parent
-            
+
             # Extract clean manhwa name from folder
             detected_name = manhwa_folder.name
             if detected_name and detected_name != 'manhwa_download':
                 # Clean up the name (remove invalid chars)
                 self.manhwa_name = config.sanitize_manhwa_name(detected_name)
-            
+
             # Check for batch mode: are there multiple Chapter_XXXXX folders?
             # ✅ BATCH FIX: only count folders that actually contain images.
             try:
@@ -246,7 +246,7 @@ class PipelineState:
                     and any(p.suffix.lower() in _IMG_EXTS_SRC for p in d.iterdir() if p.is_file())
                 ])
                 print(f"[PipelineState] Found {len(chapter_folders)} chapter folders in {manhwa_folder}")
-                
+
                 if len(chapter_folders) > 1:
                     self.is_batch = True
                     self.chapter_list = [
@@ -257,7 +257,7 @@ class PipelineState:
                     self.end_chapter = max(self.chapter_list)
                     print(f"[PipelineState] ✅ BATCH MODE ENABLED: {len(self.chapter_list)} chapters detected")
                     print(f"[PipelineState] Chapter list: {self.chapter_list}")
-                    
+
                     # DEBUG: Verify batch state is set
                     print(f"[DEBUG] After batch detection: is_batch={self.is_batch}, chapter_list={self.chapter_list}")
                 else:
@@ -272,14 +272,14 @@ class PipelineState:
             # Keep existing manhwa_name and chapter from initialization
             print(f"[PipelineState] No Chapter_ pattern found in path: {source_folder}")
             print(f"[PipelineState] Using manhwa_name='{self.manhwa_name}', chapter={self.current_chapter}")
-        
+
         # Refresh paths with detected chapter
         self.paths = config.get_manhwa_paths(self.manhwa_name, self.current_chapter)
         self._update_paths()
-        
+
         # Save the updated batch state
         self.save()
-    
+
     def _update_paths(self):
         """Update all directory paths based on current manhwa name and chapter."""
         self.download_dir = self.paths['download']
@@ -290,12 +290,12 @@ class PipelineState:
         self.audio_dir = self.paths['audio']
         self.clips_dir = self.paths['clips']
         self.state_file = self.paths['state']
-        
+
         # Legacy compatibility
         self.project_dir = self.crop_dir
         self.raw_dir = self.download_dir
         self.stitched_dir = self.stitch_dir
-        
+
         # Create directories if they don't exist
         os.makedirs(self.download_dir, exist_ok=True)
         os.makedirs(self.stitch_dir, exist_ok=True)
@@ -304,7 +304,7 @@ class PipelineState:
         os.makedirs(self.text_dir, exist_ok=True)
         os.makedirs(self.audio_dir, exist_ok=True)
         os.makedirs(self.clips_dir, exist_ok=True)
-    
+
     def switch_to_chapter(self, chapter_num: int):
         """Switch context to a different chapter in batch processing."""
         if chapter_num not in self.chapter_list:
@@ -326,7 +326,7 @@ class PipelineState:
         # Switch to new chapter
         self.current_chapter = chapter_num
         self.paths = config.get_manhwa_paths(self.manhwa_name, chapter_num)
-        
+
         # Update directories
         self.download_dir = self.paths['download']
         self.stitch_dir = self.paths['stitch']
@@ -336,12 +336,12 @@ class PipelineState:
         self.audio_dir = self.paths['audio']
         self.clips_dir = self.paths['clips']
         self.state_file = self.paths['state']
-        
+
         # Update legacy paths
         self.project_dir = self.crop_dir
         self.raw_dir = self.download_dir
         self.stitched_dir = self.stitch_dir
-        
+
         # Load chapter-specific state
         if os.path.exists(self.state_file):
             data = self._read_state_json(self.state_file)
@@ -505,7 +505,7 @@ class PipelineState:
         self.is_batch = data.get('is_batch', False)
         self.chapter_list = data.get('chapter_list', [self.current_chapter])
         self.manhwa_name = data.get('manhwa_name', self.manhwa_name)
-        
+
         # If batch info was loaded, set start/end chapters
         if self.is_batch and len(self.chapter_list) > 1:
             self.start_chapter = min(self.chapter_list)
@@ -514,7 +514,7 @@ class PipelineState:
     def save(self):
         """Save current chapter state to its state file."""
         self.updated_at = datetime.now().isoformat()
-        
+
         # DEBUG: Log what we're about to save
         print(f"[DEBUG] save() called: is_batch={self.is_batch}, chapter_list={self.chapter_list}")
 
@@ -544,7 +544,7 @@ class PipelineState:
         else:
             self._meta_sync_sig = meta_sig
             chapters_to_save = self.chapter_list if self.is_batch else [self.current_chapter]
-        
+
         data = {
             'project_name': self.project_name,
             'manhwa_name': self.manhwa_name,
@@ -572,12 +572,12 @@ class PipelineState:
             'boxes2_cropped_hash': self.boxes2_cropped_hash,
             'batch_progress': self.batch_progress,
         }
-        
+
         # Save current chapter's state file
         os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
         with open(self.state_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, default=str, ensure_ascii=False)
-        
+
         # ✅ BATCH MODE FIX: Save master state file with current viewing chapter
         if self.is_batch:
             master_state_file = os.path.join(config.MANHWA_DOWNLOAD_DIR, self.manhwa_name, '.batch_state.json')
@@ -597,7 +597,7 @@ class PipelineState:
             os.makedirs(os.path.dirname(master_state_file), exist_ok=True)
             with open(master_state_file, 'w', encoding='utf-8') as f:
                 json.dump(master_data, f, indent=2)
-        
+
         # ✅ BATCH FIX: Sync ONLY batch metadata to other chapters' state files.
         # The old code copied the entire data blob (stitched_parts, panels, boxes,
         # stage...) into every chapter's file, so all chapters ended up pointing
@@ -718,7 +718,7 @@ class PipelineState:
                         print(f"[PipelineState.load] Batch mode: Loading chapter {viewing_chapter} from master state")
                 except Exception as e:
                     print(f"[PipelineState.load] Could not load master state: {e}")
-        
+
         if os.path.exists(state.state_file):
             data = cls._read_state_json(state.state_file)
             if data is not None:
@@ -769,14 +769,14 @@ class PipelineState:
             state.save()
 
         return state
-    
+
     @classmethod
     def load_chapter(cls, manhwa_name: str, chapter_num: int):
         """Load a specific chapter directly."""
         project_name = config.get_batch_project_name(manhwa_name, chapter_num, chapter_num)
         state = cls(project_name)
         state.current_chapter = chapter_num
-        
+
         if os.path.exists(state.state_file):
             data = cls._read_state_json(state.state_file)
             if data is not None:
@@ -793,18 +793,18 @@ class PipelineState:
         """
         # ── clips_done: video clips exist in manhwa_clips/ ──────────────────
         if os.path.isdir(self.clips_dir):
-            clips = [f for f in os.listdir(self.clips_dir) 
+            clips = [f for f in os.listdir(self.clips_dir)
                     if f.endswith('.mp4') and os.path.getsize(os.path.join(self.clips_dir, f)) > 10000]
             if clips:
                 return 'clips_done'
-        
+
         # ── video_done: legacy video path or clips folder ───────────────────
         if self.video_path and os.path.exists(self.video_path):
             return 'video_done'
 
         # ── audio_done: audio files exist in manhwa_audio/ ──────────────────
         if os.path.isdir(self.audio_dir):
-            audio_files = [f for f in os.listdir(self.audio_dir) 
+            audio_files = [f for f in os.listdir(self.audio_dir)
                           if f.endswith('.mp3') and os.path.getsize(os.path.join(self.audio_dir, f)) > 1000]
             if audio_files:
                 return 'audio_done'
@@ -815,11 +815,11 @@ class PipelineState:
 
         # ── text_extracted: text files exist in manhwa_text/ ────────────────
         if os.path.isdir(self.text_dir):
-            text_files = [f for f in os.listdir(self.text_dir) 
+            text_files = [f for f in os.listdir(self.text_dir)
                          if f.endswith(('.txt', '.json')) and os.path.getsize(os.path.join(self.text_dir, f)) > 10]
             if text_files:
                 return 'text_extracted'
-        
+
         # Also check if panels have text
         if any(p.get('text') or p.get('dialogue') for p in self.panels):
             return 'text_extracted'
@@ -887,21 +887,21 @@ class PipelineState:
 
         # ── stitched: stitched images exist in manhwa_stitch/ ───────────────
         if os.path.isdir(self.stitch_dir):
-            stitch_files = [f for f in os.listdir(self.stitch_dir) 
+            stitch_files = [f for f in os.listdir(self.stitch_dir)
                            if f.startswith('stitched_') and f.endswith(('.jpg', '.png'))]
             if stitch_files:
                 return 'stitched'
-        
+
         if self.stitched_parts:
             return 'stitched'
 
         # ── loaded: raw images exist in manhwa_download/ ────────────────────
         if os.path.isdir(self.download_dir):
-            raw_files = [f for f in os.listdir(self.download_dir) 
+            raw_files = [f for f in os.listdir(self.download_dir)
                         if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))]
             if raw_files:
                 return 'loaded'
-        
+
         if self.raw_pages:
             return 'loaded'
 
@@ -965,9 +965,9 @@ class Orchestrator:
                 chapter_dir = os.path.join(title_dir, chapter)
                 if not os.path.isdir(chapter_dir) or chapter == "stitched":
                     continue
-                
+
                 project_name = f"{title}___{chapter}"
-                
+
                 state_file = os.path.join(config.MANHWA_PANEL_DIR, title, chapter, "state.json")
                 stage = 'init'
                 panels_count = 0
@@ -975,7 +975,7 @@ class Orchestrator:
                 updated_at = ''
                 video_path = None
                 settings = {}
-                
+
                 if os.path.exists(state_file):
                     try:
                         with open(state_file) as f:
@@ -987,7 +987,7 @@ class Orchestrator:
                         video_path = data.get('video_path')
                         settings = data.get('settings', {})
                     except Exception: pass
-                
+
                 projects.append({
                     'name': project_name,
                     'stage': stage,
@@ -1008,7 +1008,7 @@ class Orchestrator:
         return {'ollama': self.narrator.check_ollama(), 'ffmpeg': _check_ffmpeg()}
 
     # ─── Pipeline Steps ──────────────────────────────────────────
-    
+
     def _reset_viewing_to_first_chapter(self, state):
         """After a batch step finishes, return the viewing context to the first
         chapter so the UI opens on Chapter 1 instead of the last processed one."""
@@ -1033,33 +1033,33 @@ class Orchestrator:
         }
         if state.is_batch and len(state.chapter_list) > 1:
             print(f"[{step_name}] BATCH MODE: Processing {len(state.chapter_list)} chapters: {state.chapter_list}")
-            
+
             for idx, chapter_num in enumerate(state.chapter_list):
                 if self._should_cancel:
                     break
-                
-                self._emit_progress(step_name, idx, len(state.chapter_list), 
+
+                self._emit_progress(step_name, idx, len(state.chapter_list),
                     f"Processing Chapter {chapter_num} ({idx + 1}/{len(state.chapter_list)})...")
-                
+
                 # Switch to this chapter
                 state.switch_to_chapter(chapter_num)
-                
+
                 # Process this chapter
                 single_step_func(state)
-                
+
                 if state.error:
                     print(f"[{step_name}] Error in chapter {chapter_num}: {state.error}")
                     # Continue with next chapter instead of stopping
                     state.error = None
-            
-            self._emit_progress(step_name, len(state.chapter_list), len(state.chapter_list), 
+
+            self._emit_progress(step_name, len(state.chapter_list), len(state.chapter_list),
                 f"Batch {step_name} complete for {len(state.chapter_list)} chapters")
             self._reset_viewing_to_first_chapter(state)
             return state
-        
+
         # Single mode: just run the function once
         return single_step_func(state)
-    
+
     def step_load_images(self, project_name, source_folder):
         state = PipelineState(project_name)
         self._emit_progress('load', 0, 1, "Loading images...")
@@ -1068,14 +1068,14 @@ class Orchestrator:
             import json
             from pathlib import Path
             import re
-            
+
             load_dir = source_folder if source_folder and os.path.exists(source_folder) else state.raw_dir
-            
+
             if not os.path.exists(load_dir):
                 state.error = f"Raw directory not found: {load_dir}"
                 state.save()
                 return state
-            
+
             # Check for batch mode: multiple Chapter_XXXXX folders?
             # ✅ BATCH FIX: only count folders that actually contain images —
             # empty folders (e.g. a stray Chapter_00000) must not become chapters.
@@ -1086,7 +1086,7 @@ class Orchestrator:
                 if d.is_dir() and re.match(r'Chapter_\d{5}', d.name)
                 and any(p.suffix.lower() in _IMG_EXTS for p in d.iterdir() if p.is_file())
             ])
-            
+
             is_batch_mode = len(chapter_folders) > 1
             # ✅ BATCH FIX: a manhwa root with chapter subfolders (even just one
             # ready so far, e.g. during a partial download) must load those
@@ -1108,16 +1108,16 @@ class Orchestrator:
                 state.start_chapter = min(state.chapter_list)
                 state.end_chapter = max(state.chapter_list)
                 state.current_chapter = state.start_chapter
-                
+
                 print(f"[Load] Batch info: manhwa='{state.manhwa_name}', chapters={state.chapter_list}")
-                
+
                 # Load images for each chapter
                 for idx, chapter_num in enumerate(state.chapter_list):
-                    self._emit_progress('load', idx, len(state.chapter_list), 
+                    self._emit_progress('load', idx, len(state.chapter_list),
                         f"Loading Chapter {chapter_num} ({idx + 1}/{len(state.chapter_list)})...")
-                    
+
                     state.switch_to_chapter(chapter_num)
-                    
+
                     # Load images for this chapter
                     chapter_dir = manhwa_folder / f"Chapter_{chapter_num:05d}"
                     _IMG_EXTS = {".img", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
@@ -1125,15 +1125,15 @@ class Orchestrator:
                         str(p) for p in chapter_dir.iterdir()
                         if p.is_file() and p.suffix.lower() in _IMG_EXTS
                     )
-                    
+
                     state.raw_pages = images
                     state.stage = 'loaded'
                     state.error = None
                     state.save()
-                    
+
                     print(f"[Load] Chapter {chapter_num}: Loaded {len(images)} images")
-                
-                self._emit_progress('load', len(state.chapter_list), len(state.chapter_list), 
+
+                self._emit_progress('load', len(state.chapter_list), len(state.chapter_list),
                     f"Loaded {len(state.chapter_list)} chapters")
                 self._reset_viewing_to_first_chapter(state)
             else:
@@ -1143,19 +1143,19 @@ class Orchestrator:
                     str(p) for p in Path(load_dir).iterdir()
                     if p.is_file() and p.suffix.lower() in _IMG_EXTS
                 )
-                
+
                 if not images:
                     state.error = "No valid images found."
                     state.save()
                     return state
-                    
+
                 state.raw_pages = images
                 state.set_source(load_dir)
                 state.stage = 'loaded'
                 state.error = None
                 state.save()
                 self._emit_progress('load', 1, 1, f"Loaded {len(images)} pages")
-                
+
         except Exception as e:
             state.error = str(e)
             import traceback
@@ -1178,25 +1178,25 @@ class Orchestrator:
         has_images = (state.stage in ['loaded', 'stitched', 'detected1', 'cropped1', 'stitched2',
                                        'detected2', 'cropped2', 'text_extracted', 'text_removed',
                                        'narrated', 'audio_done', 'video_done']) or len(state.raw_pages) > 0
-        
+
         if not has_images:
             state.error = "Must load images first."
             return state
-        
+
         # ── BATCH MODE: Process all chapters ──
         if state.is_batch and len(state.chapter_list) > 1:
             print(f"[Stitch] BATCH MODE: Processing {len(state.chapter_list)} chapters: {state.chapter_list}")
-            
+
             for idx, chapter_num in enumerate(state.chapter_list):
                 if self._should_cancel:
                     break
-                
-                self._emit_progress('stitch', idx, len(state.chapter_list), 
+
+                self._emit_progress('stitch', idx, len(state.chapter_list),
                     f"Processing Chapter {chapter_num} ({idx + 1}/{len(state.chapter_list)})...")
-                
+
                 # Switch to this chapter
                 state.switch_to_chapter(chapter_num)
-                
+
                 # Check if this chapter has images — auto-scan the download
                 # folder first before giving up on this chapter
                 if not state.raw_pages or len(state.raw_pages) == 0:
@@ -1210,38 +1210,38 @@ class Orchestrator:
                 if not state.raw_pages or len(state.raw_pages) == 0:
                     print(f"[Stitch] Warning: Chapter {chapter_num} has no images, skipping...")
                     continue
-                
+
                 # Process this chapter
                 self._stitch_single_chapter(state)
-                
+
                 if state.error:
                     print(f"[Stitch] Error in chapter {chapter_num}: {state.error}")
                     # Continue with next chapter instead of stopping
                     state.error = None
-            
-            self._emit_progress('stitch', len(state.chapter_list), len(state.chapter_list), 
+
+            self._emit_progress('stitch', len(state.chapter_list), len(state.chapter_list),
                 f"Batch stitching complete for {len(state.chapter_list)} chapters")
             self._reset_viewing_to_first_chapter(state)
             return state
-        
+
         # ── SINGLE MODE: Process current chapter only ──
         return self._stitch_single_chapter(state)
-    
+
     def _stitch_single_chapter(self, state):
         """Stitch a single chapter (used by both single and batch mode)"""
         self._emit_progress('stitch', 0, 1, "Checking for stitched parts...")
         import glob, re
-        
+
         def natural_sort_key(s):
             return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
-            
+
         # Check for existing stitched parts (match actual filenames from export_dataset_stitched)
         existing_parts = sorted(glob.glob(os.path.join(state.stitched_dir, "stitched_part*.jpg")), key=natural_sort_key)
         if not existing_parts:
             existing_parts = sorted(glob.glob(os.path.join(state.stitched_dir, "stitched_dataset.jpg")), key=natural_sort_key)
         if not existing_parts:
             existing_parts = sorted(glob.glob(os.path.join(state.stitched_dir, "stitched_full.*")), key=natural_sort_key)
-            
+
         if existing_parts:
             state.stitched_parts = existing_parts
             if not self._stage_gte(state, 'stitched'):
@@ -1256,26 +1256,26 @@ class Orchestrator:
             temp_stitched = stitch_images(
                 state.raw_pages, state,
                 progress_callback=lambda c, t, m: self._emit_progress('stitch', c, t, m))
-            
+
             import re
             ch_num_match = re.search(r'(\d+)', str(state.current_chapter))
             ch_num = int(ch_num_match.group(1)) if ch_num_match else 1
-            
+
             self._emit_progress('stitch', 1, 1, f"Splitting into parts for LLM safety...")
-            
+
             saved_parts = export_dataset_stitched(
-                temp_stitched, 
+                temp_stitched,
                 state,
                 progress_callback=lambda c, t, m: self._emit_progress('stitch', c, t, m))
-                
+
             state.stitched_parts = saved_parts
             state.stage = 'stitched'
             state.error = None
             state.save()
-            
+
             if os.path.exists(temp_stitched):
                 os.remove(temp_stitched)
-                
+
             self._emit_progress('stitch', 1, 1, "Stitching complete")
         except Exception as e:
             state.error = str(e)
@@ -1286,7 +1286,7 @@ class Orchestrator:
         if not self._stage_gte(state, 'loaded'):
             state.error = "Must load/stitch images first."
             return state
-            
+
         # Use stitched parts if available, otherwise use raw pages
         if state.stitched_parts and len(state.stitched_parts) > 0:
             # Use stitched parts (new structure)
@@ -1296,12 +1296,12 @@ class Orchestrator:
             # Fallback to raw pages
             input_images = state.raw_pages
             msg_prefix = "Cropping panels from raw pages"
-            
+
         if not input_images:
             state.error = "No images to crop from"
             state.save()
             return state
-            
+
         self._emit_progress('crop', 0, len(input_images), f"{msg_prefix}...")
         try:
             panels = crop_panels(input_images, state,
@@ -1321,44 +1321,44 @@ class Orchestrator:
         if not self._stage_gte(state, 'stitched'):
             state.error = "Must stitch images first."
             return state
-        
+
         # Re-running detection invalidates downstream two-stage detection
         state.stitched_boxes_2 = []
         state.stitched_parts_2 = []
         state.boxes1_cropped_hash = ""
         state.boxes2_cropped_hash = ""
-        
+
         self._emit_progress('detect', 0, 1, "Running YOLO panel detection on stitched parts...")
         try:
             from pipeline.panel_extractor_yolo import get_global_extractor
             extractor = get_global_extractor()
-            
+
             total_boxes = 0
             stitched_boxes = []
-            
+
             from PIL import Image
             y_offset = 0
-            
+
             for part_path in state.stitched_parts:
                 part_boxes = extractor.detect_image_boxes(part_path)
-                
+
                 with Image.open(part_path) as img:
                     part_h = img.height
-                
+
                 for box in part_boxes:
                     stitched_boxes.append({
                         "id": total_boxes + 1,
-                        "x": box['x'], 
+                        "x": box['x'],
                         "y": box['y'] + y_offset,
-                        "w": box['w'], 
+                        "w": box['w'],
                         "h": box['h'],
                         "part_path": part_path,
                         "part_y": box['y'],
                     })
                     total_boxes += 1
-                
+
                 y_offset += part_h
-            
+
             state.stitched_boxes = stitched_boxes
             state.stitched_boxes_1 = stitched_boxes  # keep UI/two-stage field in sync
             state.stage = 'detected1'
@@ -1375,16 +1375,16 @@ class Orchestrator:
         if not self._stage_gte(state, 'detected1'):
             state.error = "Must detect panels first."
             return state
-            
+
         self._emit_progress('crop', 0, 1, "Cropping detected panels from stitched parts...")
         try:
             import cv2
             import json
-            
+
             saved = []
             state.panels = []
             idx = 1
-            
+
             boxes_by_part = {}
             for box in state.stitched_boxes:
                 part_path = box.get('part_path', getattr(state, 'stitched_path', None))
@@ -1392,30 +1392,30 @@ class Orchestrator:
                 if part_path not in boxes_by_part:
                     boxes_by_part[part_path] = []
                 boxes_by_part[part_path].append(box)
-            
+
             for part_path, boxes in boxes_by_part.items():
                 stitched_img = cv2.imread(part_path)
                 if stitched_img is None:
                     continue
-                
+
                 part_name = os.path.splitext(os.path.basename(part_path))[0]
                 part_dir = os.path.join(state.project_dir, part_name)
                 os.makedirs(part_dir, exist_ok=True)
-                
+
                 manifest = {}
                 for box in boxes:
                     x, w, h = int(float(box['x'])), int(float(box['w'])), int(float(box['h']))
                     y = int(float(box.get('part_y', box['y'])))
-                    
+
                     crop = stitched_img[max(y, 0):max(y+h, 0), max(x, 0):max(x+w, 0)]
                     if crop.size == 0: continue
-                    
+
                     out = os.path.join(part_dir, f"panel_{idx}.jpg")
                     cv2.imwrite(out, crop)
-                    
+
                     manifest[f"panel_{idx}"] = "stitched"
                     saved.append(out)
-                    
+
                     state.panels.append({
                         'panel_id': idx,
                         'path': out,
@@ -1427,11 +1427,11 @@ class Orchestrator:
                         'y': y
                     })
                     idx += 1
-                
+
                 manifest_path = os.path.join(part_dir, "panels_manifest.json")
                 with open(manifest_path, 'w', encoding='utf-8') as f:
                     json.dump(manifest, f, indent=2)
-                
+
             state.stage = 'cropped2'
             state.error = None
             state.save()
@@ -1450,9 +1450,9 @@ class Orchestrator:
                                'text_removed', 'narrated', 'audio_done', 'video_done'):
             state.error = "Must stitch images first."
             return state
-        
+
         return self._run_batch_or_single(state, 'detect1', self._detect_bubble_text_single)
-    
+
     def _detect_bubble_text_single(self, state):
         """Detect bubble text for a single chapter"""
 
@@ -1463,38 +1463,38 @@ class Orchestrator:
                 f"✅ Detect 1: loaded {n} cached boxes (skipping re-detection)")
             return state
 
-        
+
         self._emit_progress('detect1', 0, 1, "Running Detect 1 (bubble text model) on stitched parts...")
         try:
             from pipeline.panel_extractor_yolo import get_global_bubble_extractor
             extractor = get_global_bubble_extractor()
-            
+
             total_boxes = 0
             boxes_1 = []
-            
+
             from PIL import Image
             y_offset = 0
-            
+
             for part_path in state.stitched_parts:
                 part_boxes = extractor.detect_image_boxes(part_path)
-                
+
                 with Image.open(part_path) as img:
                     part_h = img.height
-                
+
                 for box in part_boxes:
                     boxes_1.append({
                         "id": total_boxes + 1,
-                        "x": box['x'], 
+                        "x": box['x'],
                         "y": box['y'] + y_offset,
-                        "w": box['w'], 
+                        "w": box['w'],
                         "h": box['h'],
                         "part_path": part_path,
                         "part_y": box['y'],
                     })
                     total_boxes += 1
-                
+
                 y_offset += part_h
-            
+
             state.stitched_boxes_1 = boxes_1
             state.stitched_boxes = boxes_1  # Also set legacy field for UI compat
             state.stage = 'detected1'
@@ -1513,9 +1513,9 @@ class Orchestrator:
                                'narrated', 'audio_done', 'video_done'):
             state.error = "Must run Detect 1 first."
             return state
-        
+
         return self._run_batch_or_single(state, 'crop1', self._crop_bubble_text_single)
-    
+
     def _crop_bubble_text_single(self, state):
         """Crop bubble text panels for a single chapter"""
 
@@ -1530,14 +1530,14 @@ class Orchestrator:
                 f"✅ Crop 1: loaded {n} cached panels (boxes unchanged, skipping re-crop)")
             return state
 
-        
+
         self._emit_progress('crop1', 0, 1, "Cropping panels-with-text from stitched parts...")
         try:
             import cv2
-            
+
             # Use stitched_boxes_1, fallback to stitched_boxes for legacy
             boxes = state.stitched_boxes_1 if state.stitched_boxes_1 else state.stitched_boxes
-            
+
             # Build a part height map so we can resolve part_path for user-drawn/modified boxes
             from PIL import Image as PILImage
             part_map = []
@@ -1552,21 +1552,21 @@ class Orchestrator:
                     'height': ph,
                 })
                 y_running_parts += ph
-            
+
             state.panels_with_text = []
             idx = 1
-            
+
             for box in boxes:
                 x = int(float(box['x']))
                 y = int(float(box['y']))
                 w = int(float(box['w']))
                 h = int(float(box['h']))
-                
+
                 # Dynamically crop across multiple parts if the box spans a boundary
                 crops = []
                 current_y = y
                 remaining_h = h
-                
+
                 for pm in part_map:
                     if remaining_h <= 0:
                         break
@@ -1574,38 +1574,38 @@ class Orchestrator:
                     if pm['y_start'] <= current_y < pm['y_end']:
                         local_y = current_y - pm['y_start']
                         take_h = min(remaining_h, pm['height'] - local_y)
-                        
+
                         img = cv2.imread(pm['path'])
                         if img is not None:
                             c = img[max(local_y, 0):local_y + take_h, max(x, 0):max(x+w, 0)]
                             if c.size > 0:
                                 crops.append(c)
-                        
+
                         current_y += take_h
                         remaining_h -= take_h
-                
+
                 if not crops:
                     continue
-                    
+
                 if len(crops) == 1:
                     final_crop = crops[0]
                 else:
                     final_crop = cv2.vconcat(crops)
-                    
+
                 if final_crop.size == 0:
                     continue
-                    
+
                 out_name = f"{idx:04d}.jpg"
                 out_path = os.path.join(state.crop_dir, out_name)
                 cv2.imwrite(out_path, final_crop)
-                
+
                 # Determine main source page for reference
                 main_part = part_map[0]['path'] if part_map else ""
                 for pm in part_map:
                     if pm['y_start'] <= y < pm['y_end']:
                         main_part = pm['path']
                         break
-                        
+
                 state.panels_with_text.append({
                     'panel_id': idx,
                     'path': out_path,
@@ -1617,7 +1617,7 @@ class Orchestrator:
                     'box_id': box.get('id', idx),
                 })
                 idx += 1
-            
+
             state.boxes1_cropped_hash = current_hash
             state.stage = 'cropped1'
             state.error = None
@@ -1637,7 +1637,7 @@ class Orchestrator:
             state.error = "Must crop panels-with-text first (Crop 1)."
             return state
         return self._run_batch_or_single(state, 'stitch2', self._stitch_bubble_panels_single)
-    
+
     def _stitch_bubble_panels_single(self, state):
         """Stitch bubble panels for a single chapter."""
         # Check stage prerequisite for this chapter
@@ -1655,7 +1655,7 @@ class Orchestrator:
                 f"✅ Stitch 2: loaded {n} cached parts (skipping re-stitch)")
             return state
 
-        
+
         self._emit_progress('stitch2', 0, 1, "Stitching panels-with-text into Stitched Image 2...")
         try:
             panel_paths = [p['path'] for p in state.panels_with_text if os.path.exists(p['path'])]
@@ -1663,30 +1663,30 @@ class Orchestrator:
                 state.error = "No panels-with-text to stitch."
                 state.save()
                 return state
-            
+
             # Create a stitch2 subdirectory in the project dir
             stitch2_dir = os.path.join(state.project_dir, "stitch2")
             os.makedirs(stitch2_dir, exist_ok=True)
-            
+
             # Wrap stitch2_dir in a namespace so stitch_images() can access .stitch_dir
             class _Stitch2State:
                 def __init__(self, d):
                     self.stitch_dir = d
             stitch2_state = _Stitch2State(stitch2_dir)
-            
+
             # Use the existing stitcher to join them vertically
             temp_stitched = stitch_images(
                 panel_paths, stitch2_state,
                 progress_callback=lambda c, t, m: self._emit_progress('stitch2', c, t, m))
-            
+
             # Split into dataset-safe parts
             from pipeline.stitcher import _split_image_vertically, _save_under_size_limit, DATASET_MAX_HEIGHT
             from PIL import Image
-            
+
             img = Image.open(temp_stitched).convert('RGB')
             slices = _split_image_vertically(img, DATASET_MAX_HEIGHT)
             img.close()
-            
+
             saved_parts = []
             for part_idx, slice_img in enumerate(slices):
                 if len(slices) == 1:
@@ -1697,11 +1697,11 @@ class Orchestrator:
                 _save_under_size_limit(slice_img, out_path, 20)
                 saved_parts.append(out_path)
                 slice_img.close()
-            
+
             # Clean up temp stitched file if different from output
             if temp_stitched not in saved_parts and os.path.exists(temp_stitched):
                 os.remove(temp_stitched)
-            
+
             state.stitched_parts_2 = saved_parts
             state.stage = 'stitched2'
             state.error = None
@@ -1720,7 +1720,7 @@ class Orchestrator:
                 state.error = "Must stitch panels-with-text first (Stitch 2)."
                 return state
         return self._run_batch_or_single(state, 'detect2', self._detect_art_panels_single)
-    
+
     def _detect_art_panels_single(self, state):
         """Detect art panels for a single chapter."""
         if state.stage not in ('clips_done', 'stitched2', 'detected2', 'cropped2', 'text_extracted',
@@ -1735,38 +1735,38 @@ class Orchestrator:
                 f"✅ Detect 2: loaded {n} cached boxes (skipping re-detection)")
             return state
 
-        
+
         self._emit_progress('detect2', 0, 1, "Running Detect 2 (art panel model) on Stitched Image 2...")
         try:
             from pipeline.panel_extractor_yolo import get_global_extractor
             extractor = get_global_extractor()
-            
+
             total_boxes = 0
             boxes_2 = []
-            
+
             from PIL import Image
             y_offset = 0
-            
+
             for part_path in state.stitched_parts_2:
                 part_boxes = extractor.detect_image_boxes(part_path)
-                
+
                 with Image.open(part_path) as img:
                     part_h = img.height
-                
+
                 for box in part_boxes:
                     boxes_2.append({
                         "id": total_boxes + 1,
-                        "x": box['x'], 
+                        "x": box['x'],
                         "y": box['y'] + y_offset,
-                        "w": box['w'], 
+                        "w": box['w'],
                         "h": box['h'],
                         "part_path": part_path,
                         "part_y": box['y'],
                     })
                     total_boxes += 1
-                
+
                 y_offset += part_h
-            
+
             state.stitched_boxes_2 = boxes_2
             state.stage = 'detected2'
             state.error = None
@@ -1789,7 +1789,7 @@ class Orchestrator:
                 state.error = "Must run Detect 2 first."
                 return state
         return self._run_batch_or_single(state, 'crop2', self._crop_art_panels_single)
-    
+
     def _crop_art_panels_single(self, state):
         """Crop art panels for a single chapter."""
         if state.stage not in ('clips_done', 'detected2', 'cropped2', 'text_extracted', 'text_removed',
@@ -1808,7 +1808,7 @@ class Orchestrator:
                 f"✅ Crop 2: loaded {n} cached art panels (boxes unchanged, skipping re-crop)")
             return state
 
-        
+
         self._emit_progress('crop2', 0, 1, "Cropping art panels from Stitched Image 2...")
         try:
             import cv2
@@ -1831,7 +1831,7 @@ class Orchestrator:
                     text_remover = None
 
             boxes = state.stitched_boxes_2
-            
+
             # Build a part height map so we can resolve part_path for user-drawn boxes
             from PIL import Image as PILImage
             part_map = []  # [{path, y_start, y_end, height}]
@@ -1846,13 +1846,13 @@ class Orchestrator:
                     'height': ph,
                 })
                 y_running_parts += ph
-            
+
             state.panels = []
             state.panels_mapping = {}
             idx = 1
-            
+
             manifests_by_part = {}
-            
+
             # Build a vertical position map of panels_with_text for mapping
             # Each panel_with_text occupies a vertical slice in Stitched Image 2
             pwt_ranges = []
@@ -1866,18 +1866,18 @@ class Orchestrator:
                     'path': pwt['path'],
                 })
                 y_running += pwt_h
-            
+
             for box in boxes:
                 x = int(float(box['x']))
                 y = int(float(box['y']))
                 w = int(float(box['w']))
                 h = int(float(box['h']))
-                
+
                 # Dynamically crop across multiple parts if the box spans a boundary
                 crops = []
                 current_y = y
                 remaining_h = h
-                
+
                 for pm in part_map:
                     if remaining_h <= 0:
                         break
@@ -1885,42 +1885,42 @@ class Orchestrator:
                     if pm['y_start'] <= current_y < pm['y_end']:
                         local_y = current_y - pm['y_start']
                         take_h = min(remaining_h, pm['height'] - local_y)
-                        
+
                         img = cv2.imread(pm['path'])
                         if img is not None:
                             c = img[max(local_y, 0):local_y + take_h, max(x, 0):max(x+w, 0)]
                             if c.size > 0:
                                 crops.append(c)
-                        
+
                         current_y += take_h
                         remaining_h -= take_h
-                
+
                 if not crops:
                     continue
-                    
+
                 if len(crops) == 1:
                     final_crop = crops[0]
                 else:
                     final_crop = cv2.vconcat(crops)
-                    
+
                 if final_crop.size == 0:
                     continue
-                    
+
                 # Determine main part for directory
                 main_part = part_map[0]['path'] if part_map else ""
                 for pm in part_map:
                     if pm['y_start'] <= y < pm['y_end']:
                         main_part = pm['path']
                         break
-                        
+
                 part_name = os.path.splitext(os.path.basename(main_part))[0]
                 part_dir = os.path.join(state.project_dir, part_name)
                 os.makedirs(part_dir, exist_ok=True)
-                
+
                 if part_dir not in manifests_by_part:
                     manifests_by_part[part_dir] = {}
                 manifests_by_part[part_dir][f"panel_{idx}"] = "stitched2"
-                
+
                 out_raw = os.path.join(part_dir, f"panel_{idx}_raw.jpg")
                 cv2.imwrite(out_raw, final_crop)
 
@@ -1945,7 +1945,7 @@ class Orchestrator:
                         print(f"[crop2] panel_{idx}: cleaning failed ({_ce}) — keeping raw crop")
                 if not cleaned_ok:
                     cv2.imwrite(out, final_crop)
-                
+
                 # Map to parent panel_with_text by finding which pwt range contains this box center
                 center_y = y + h // 2
                 parent_pwt = None
@@ -1953,15 +1953,15 @@ class Orchestrator:
                     if pwt_range['y_start'] <= center_y < pwt_range['y_end']:
                         parent_pwt = pwt_range
                         break
-                
+
                 parent_id = parent_pwt['panel_id'] if parent_pwt else None
                 parent_path = parent_pwt['path'] if parent_pwt else None
-                
+
                 state.panels_mapping[str(idx)] = {
                     'parent_panel_id': parent_id,
                     'parent_path': parent_path,
                 }
-                
+
                 state.panels.append({
                     'panel_id': idx,
                     'path': out,
@@ -1976,17 +1976,17 @@ class Orchestrator:
                     'box_id': box.get('id', idx),
                 })
                 idx += 1
-                
+
             for part_dir, manifest in manifests_by_part.items():
                 manifest_path = os.path.join(part_dir, "panels_manifest.json")
                 with open(manifest_path, 'w', encoding='utf-8') as f:
                     json.dump(manifest, f, indent=2)
-            
+
             # Save mapping file
             mapping_path = os.path.join(state.project_dir, "panels_mapping.json")
             with open(mapping_path, 'w', encoding='utf-8') as f:
                 json.dump(state.panels_mapping, f, indent=2)
-            
+
             state.boxes2_cropped_hash = current_hash2
             state.stage = 'cropped2'
             state.error = None
@@ -2003,12 +2003,12 @@ class Orchestrator:
                                'text_removed', 'narrated', 'audio_done', 'video_done'):
             state.error = "Must crop panels-with-text first."
             return state
-        
+
         return self._run_batch_or_single(state, 'extract_dialogue', self._extract_dialogue_single)
-    
+
     def _extract_dialogue_single(self, state):
         """Extract dialogue for a single chapter"""
-        
+
         if not state.panels_with_text:
             state.error = "No panels-with-text available for text extraction."
             state.save()
@@ -2039,10 +2039,10 @@ class Orchestrator:
             self._emit_progress('extract_dialogue', 1, 1,
                 f"✅ Extract Text: loaded from cached file (skipping re-extraction)")
             return state
-        
+
         model = state.settings.get('ollama_model', config.OLLAMA_MODEL)
         engine = state.settings.get('ocr_engine', 'qwen')
-        
+
         self._emit_progress('extract_dialogue', 0, len(state.panels_with_text), "Extracting dialogue from panels-with-text...")
         try:
             print(f"[DEBUG] Starting extract_dialogue with {len(state.panels_with_text)} panels, engine={engine}")
@@ -2051,46 +2051,46 @@ class Orchestrator:
                 'path': p['path'],
                 'padded_path': p['path'],  # The panel IS the padded context
             } for p in state.panels_with_text]
-            
+
             print(f"[DEBUG] Calling extract_text_all_panels...")
             panels_result = extract_text_all_panels(
                 panels_for_extract, state,
                 model=model,
                 engine=engine,
                 progress_callback=lambda c, t, m: self._emit_progress('extract_dialogue', c, t, m))
-            
+
             print(f"[DEBUG] extract_text_all_panels returned {len(panels_result)} panels")
-            
+
             # Save extracted text to a .txt file in extracted_txt/title/chapter.txt
             os.makedirs(txt_dir, exist_ok=True)
-            
+
             lines = []
             for p in panels_result:
                 lines.append(f"[PANEL {p['panel_id']}]")
                 lines.append(p.get('text', '(no dialogue)').strip() or '(no dialogue)')
                 lines.append('')
-            
+
             with open(txt_path, 'w', encoding='utf-8') as f:
                 f.write('\n'.join(lines))
-            
+
             print(f"[DEBUG] Saved text to {txt_path}")
-            
+
             # Update panels_with_text with extracted text
             for i, p in enumerate(panels_result):
                 if i < len(state.panels_with_text):
                     state.panels_with_text[i]['text'] = p.get('text', '')
                     state.panels_with_text[i]['visual_description'] = p.get('visual_description', '')
-            
+
             # Also assign extracted text to art panels via mapping
             text_by_parent = {}
             for pwt in state.panels_with_text:
                 text_by_parent[pwt['panel_id']] = pwt.get('text', '')
-            
+
             for panel in state.panels:
                 parent_id = panel.get('parent_panel_id')
                 if parent_id and parent_id in text_by_parent:
                     panel['text'] = text_by_parent[parent_id]
-            
+
             state.stage = 'text_extracted'
             state.error = None
             state.save()
@@ -2122,7 +2122,7 @@ class Orchestrator:
                                'audio_done', 'video_done'):
             state.error = "Must extract text first."
             return state
-        
+
         # Capture the per-request force flag BEFORE the batch loop —
         # switch_to_chapter() reloads per-chapter settings which would wipe it
         self._force_renarrate = bool(state.settings.pop('force_renarrate', False))
@@ -2130,7 +2130,7 @@ class Orchestrator:
             return self._run_batch_or_single(state, 'narrate', self._narrate_mapped_single)
         finally:
             self._force_renarrate = False
-    
+
     def _narrate_mapped_single(self, state):
         """Generate narration for a single chapter"""
 
@@ -2194,7 +2194,7 @@ class Orchestrator:
                               f"cached, re-narrating {len(missing)} missing panel(s)")
             except Exception as e:
                 print(f"[NarrateMapped] Cache load failed: {e} — will re-narrate")
-        
+
         # Load extracted dialogue text
         narration_dir = os.path.join(config.NARRATION_DIR, state.manhwa_name, f"Chapter_{state.current_chapter:05d}")
         os.makedirs(narration_dir, exist_ok=True)
@@ -2208,12 +2208,12 @@ class Orchestrator:
             print(f"[NarrateMapped] Loaded dialogue from {txt_path} ({len(dialogue_text)} chars)")
         else:
             print(f"[NarrateMapped] No dialogue file found at {txt_path}, proceeding without text")
-        
+
         # Build text lookup by parent panel ID
         text_by_parent = {}
         for pwt in state.panels_with_text:
             text_by_parent[pwt['panel_id']] = pwt.get('text', '')
-        
+
         # Parse chapter text into per-panel dialogue by [PANEL N] markers
         # This is the FALLBACK when parent_panel_id mapping is unavailable
         text_by_panel_index = {}
@@ -2231,7 +2231,7 @@ class Orchestrator:
                     pass
             if text_by_panel_index:
                 print(f"[NarrateMapped] Parsed {len(text_by_panel_index)} panel dialogue blocks from chapter text")
-        
+
         self._emit_progress('narrate_mapped', 0, len(state.panels), "Starting mapped narration...")
 
         try:
@@ -2267,9 +2267,9 @@ class Orchestrator:
             cast_reference_images = self._load_cast_reference_images(state)
             if cast_reference_images:
                 print(f"[NarrateMapped] Cast: {len(cast_characters)} characters, {len(cast_reference_images)} reference faces loaded")
-            
+
             narration_entries = []
-            
+
             for i, panel in enumerate(state.panels):
                 if self._should_cancel: return state
 
@@ -2294,23 +2294,23 @@ class Orchestrator:
                 parent_id = panel.get('parent_panel_id')
                 parent_path = None
                 panel_dialogue = ""
-                
+
                 if parent_id:
                     mapping = state.panels_mapping.get(str(panel['panel_id']), {})
                     parent_path = mapping.get('parent_path')
                     panel_dialogue = text_by_parent.get(parent_id, '')
-                
+
                 # FALLBACK: If no parent mapping, use the parsed chapter text by panel index
                 if not panel_dialogue:
                     panel_dialogue = text_by_panel_index.get(panel['panel_id'], '')
-                
+
                 # Build the narration prompt with both images and text context
                 art_panel_path = panel['path']
                 # Build sliding window text context (Prev, Curr, Next)
                 prev_txt = ""
                 curr_txt = panel_dialogue
                 next_txt = ""
-                
+
                 if i > 0:
                     prev_parent_id = state.panels[i-1].get('parent_panel_id')
                     if prev_parent_id:
@@ -2323,9 +2323,9 @@ class Orchestrator:
                         next_txt = text_by_parent.get(next_parent_id, '')
                     if not next_txt:
                         next_txt = text_by_panel_index.get(state.panels[i+1]['panel_id'], '')
-                        
+
                 sliding_window = f"--- PREVIOUS PANEL DIALOGUE ---\n{prev_txt}\n\n--- CURRENT PANEL DIALOGUE ---\n{curr_txt}\n\n--- NEXT PANEL DIALOGUE ---\n{next_txt}"
-                
+
                 try:
                     if gemini_narr is not None:
                         story_so_far = " ".join(
@@ -2366,7 +2366,7 @@ class Orchestrator:
                         return state
                     print(f"[NarrateMapped] Error on panel {panel['panel_id']}: {e}")
                     narration = f"[Panel {panel['panel_id']}] (narration failed)"
-                
+
                 entry = {
                     'panel_id': panel['panel_id'],
                     'art_panel_path': art_panel_path,
@@ -2376,7 +2376,7 @@ class Orchestrator:
                     'backend': narration_backend,
                 }
                 narration_entries.append(entry)
-                
+
                 # Also update the panel's narration field for downstream use
                 panel['narration'] = narration
                 panel['scene_narration'] = narration  # UI prefers scene_narration
@@ -2386,7 +2386,7 @@ class Orchestrator:
                 narration_json_path = os.path.join(narration_dir, "narration.json")
                 with open(narration_json_path, 'w', encoding='utf-8') as f:
                     json.dump(narration_entries, f, indent=2, ensure_ascii=False)
-                
+
                 narration_txt_path = os.path.join(narration_dir, "narration.txt")
                 lines = []
                 for e in narration_entries:
@@ -2397,11 +2397,11 @@ class Orchestrator:
                     lines.append("")
                 with open(narration_txt_path, 'w', encoding='utf-8') as f:
                     f.write('\n'.join(lines))
-                
+
                 script_path = os.path.join(state.project_dir, "narration_script.json")
                 with open(script_path, 'w', encoding='utf-8') as f:
                     json.dump(narration_entries, f, indent=2, ensure_ascii=False)
-            
+
             state.stage = 'narrated'
             state.error = None
             # Remember which backend produced these narrations so a re-run
@@ -2426,11 +2426,11 @@ class Orchestrator:
             return state
         model = state.settings.get('ollama_model', config.OLLAMA_MODEL)
         engine = state.settings.get('ocr_engine', 'qwen')
-        
+
         if not state.stitched_parts:
             state.error = "No stitched parts found for text extraction."
             return state
-            
+
         self._emit_progress('extract_text', 0, len(state.panels), "Starting text extraction...")
         try:
             panels = extract_text_all_panels(
@@ -2455,7 +2455,7 @@ class Orchestrator:
                 state.error = "Must extract text first (or at least crop panels)."
                 return state
         return self._run_batch_or_single(state, 'remove_text', self._remove_text_boxes_single)
-    
+
     def _remove_text_boxes_single(self, state):
         """Remove text boxes for a single chapter."""
         if state.stage not in ('clips_done', 'text_extracted', 'text_removed', 'cropped1', 'cropped2'):
@@ -2489,7 +2489,7 @@ class Orchestrator:
         # Three-input context (port from YTV3):
         #   raw_dir       — full raw pages for visual context (Now uses source_page directly)
         #   text_file     — chapter transcript for story/dialogue context
-        
+
         # Extracted text is completely bypassed. The visual narrator will read directly from the image.
         text_file = None
 
@@ -2515,9 +2515,9 @@ class Orchestrator:
         if state.stage not in ('clips_done', 'narrated', 'audio_done', 'video_done', 'text_extracted', 'text_removed'):
             state.error = "Must generate narrations or extract text first."
             return state
-        
+
         return self._run_batch_or_single(state, 'audio', self._generate_audio_single)
-    
+
     def _generate_audio_single(self, state):
         """Generate audio for a single chapter"""
 
@@ -2601,9 +2601,9 @@ class Orchestrator:
         if state.stage not in ('clips_done', 'audio_done', 'video_done', 'narrated'):
             state.error = "Must generate audio first."
             return state
-        
+
         return self._run_batch_or_single(state, 'video', self._compose_video_single)
-    
+
     def _compose_video_single(self, state):
         """Compose video for a single chapter"""
 
@@ -2643,7 +2643,7 @@ class Orchestrator:
                         panel['subtitle_path'] = m.get('subtitle_path')
             except Exception as e:
                 print(f"[Video] Failed to restore audio metadata: {e}")
-            
+
         self._emit_progress('video', 0, len(panels_to_use), "Starting individual clip generation...")
         try:
             # ✅ RELIABILITY: pre-flight disk space check — failing at chapter 60
@@ -2664,18 +2664,18 @@ class Orchestrator:
                 pass  # disk check is best-effort; never block rendering on it
 
             s = state.settings
-            
+
             # Set background color settings in config for compositor to use
             if s.get('bg_color'):
                 config.BACKGROUND_COLOR_HEX = s.get('bg_color')
             if s.get('color_opacity') is not None:
                 config.COLOR_OVERLAY_OPACITY = s.get('color_opacity')
-            
+
             # Handle custom background path
             custom_bg = s.get('custom_bg_path', '')
             if custom_bg and not os.path.isabs(custom_bg):
                 custom_bg = os.path.join(config.BACKGROUNDS_DIR, custom_bg)
-            
+
             # Generate individual clips instead of concatenating
             from pipeline.compositor import generate_individual_clips
             clip_metadata = generate_individual_clips(
@@ -2688,13 +2688,13 @@ class Orchestrator:
                 animation_style=s.get('animation_style', 'auto'),
                 watermark_path=s.get('watermark_path', ''),
                 progress_callback=lambda c, t, m: self._emit_progress('video', c, t, m))
-            
+
             # Store clip metadata in state
             state.video_clips = clip_metadata
             state.stage = 'clips_done'
             state.error = None
             state.save()
-            
+
             total_duration = sum(clip['duration'] for clip in clip_metadata)
             self._emit_progress('video', 1, 1,
                 f"Generated {len(clip_metadata)} clips! Total duration: {total_duration:.1f}s")

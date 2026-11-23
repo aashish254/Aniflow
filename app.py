@@ -63,7 +63,7 @@ def list_projects():
 @app.route('/api/projects/<name>', methods=['GET'])
 def get_project(name):
     state = PipelineState.load(name)
-    
+
     # IMMEDIATE FIX: Detect batch mode manually by checking folder structure
     # This bypasses the broken state loading logic
     # NOTE: use state.project_name (resolved to the real on-disk folder) —
@@ -71,14 +71,14 @@ def get_project(name):
     project_root = os.path.join(config.MANHWA_DOWNLOAD_DIR, state.project_name)  # resolved name
     manual_batch_check = False
     manual_chapter_list = [state.current_chapter]
-    
+
     # DEBUG: Log exactly what we're checking
     print(f"[DEBUG] Checking path: {project_root}")
     print(f"[DEBUG] Path exists: {os.path.exists(project_root)}")
     if os.path.exists(project_root):
         all_items = os.listdir(project_root)
         print(f"[DEBUG] Contents: {all_items}")
-        
+
         # Find Chapter_ folders that have actual images (not empty)
         chapter_dirs = []
         for d in all_items:
@@ -91,7 +91,7 @@ def get_project(name):
                 )
                 if has_images:
                     chapter_dirs.append(d)
-        
+
         print(f"[DEBUG] Chapter dirs with images: {chapter_dirs}")
         if len(chapter_dirs) > 1:
             manual_batch_check = True
@@ -103,12 +103,12 @@ def get_project(name):
             print(f"[DEBUG] Only {len(chapter_dirs)} chapter dirs found, not batch mode")
     else:
         print(f"[DEBUG] Project root doesn't exist")
-    
+
     # Override state values with manual detection
     actual_is_batch = manual_batch_check
     actual_chapter_list = manual_chapter_list
     actual_manhwa_name = state.project_name.replace('-', ' ').replace('Dragonslayers', "Dragonslayer's")  # Fix display name
-    
+
     return jsonify({
         'name': state.project_name, 'stage': state.stage, 'panels': state.panels,
         'raw_pages': [os.path.basename(p) for p in state.raw_pages],
@@ -162,10 +162,10 @@ def switch_chapter():
     data = request.json
     project_name = data.get('project_name')
     chapter_num = data.get('chapter_num')
-    
+
     if not project_name or chapter_num is None:
         return jsonify({'error': 'project_name and chapter_num required'}), 400
-    
+
     try:
         state = PipelineState.load(project_name)
 
@@ -174,7 +174,7 @@ def switch_chapter():
         project_root = os.path.join(config.MANHWA_DOWNLOAD_DIR, state.project_name)
         manual_batch_check = False
         manual_chapter_list = [state.current_chapter]
-        
+
         if os.path.exists(project_root):
             # Find Chapter_ folders that have actual images (not empty)
             chapter_dirs = []
@@ -188,27 +188,27 @@ def switch_chapter():
                     )
                     if has_images:
                         chapter_dirs.append(d)
-            
+
             if len(chapter_dirs) > 1:
                 manual_batch_check = True
                 manual_chapter_list = sorted([
                     int(d.replace('Chapter_', '')) for d in chapter_dirs
                 ])
-        
+
         # Use manual batch detection
         if not manual_batch_check:
             return jsonify({'error': 'Project is not a batch project'}), 400
-        
+
         if chapter_num not in manual_chapter_list:
             return jsonify({'error': f'Chapter {chapter_num} not in chapter list'}), 400
-        
+
         # Update state's chapter list with manual detection before switching
         state.is_batch = manual_batch_check
         state.chapter_list = manual_chapter_list
-        
+
         state.switch_to_chapter(chapter_num)
         state.save()
-        
+
         # Return full chapter state so frontend can update UI
         return jsonify({
             'status': 'switched',
@@ -232,7 +232,7 @@ def browse_folder():
     try:
         import platform
         import subprocess
-        
+
         if platform.system() == 'Darwin':  # macOS
             # Use AppleScript for folder picker on macOS
             script = '''
@@ -248,7 +248,7 @@ def browse_folder():
                 text=True,
                 timeout=60
             )
-            
+
             if result.returncode == 0:
                 folder_path = result.stdout.strip()
                 if folder_path:
@@ -263,23 +263,23 @@ def browse_folder():
             # Use tkinter for other platforms
             import tkinter as tk
             from tkinter import filedialog
-            
+
             root = tk.Tk()
             root.withdraw()
             root.attributes('-topmost', True)
-            
+
             folder_path = filedialog.askdirectory(
                 title='Select Output Folder for Sorted Clips',
                 mustexist=True
             )
-            
+
             root.destroy()
-            
+
             if folder_path:
                 return jsonify({'path': folder_path})
             else:
                 return jsonify({'cancelled': True}), 200
-            
+
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'Folder selection timeout'}), 500
     except ImportError:
@@ -781,29 +781,29 @@ def run_batch():
     data = request.json
     projects = data.get('projects', [])
     steps = data.get('steps', [])
-    
+
     if not projects or not steps:
         return jsonify({'error': 'No projects or steps provided'}), 400
-        
+
     def run():
         orchestrator._should_cancel = False
         socketio.emit('batch_started', {'steps': steps, 'total': len(projects)})
         for idx, p in enumerate(projects):
             if orchestrator._should_cancel:
                 break
-                
+
             project_name = p.get('name') if isinstance(p, dict) else p
             folder = p.get('folder') if isinstance(p, dict) else ''
-            
+
             socketio.emit('batch_progress', {
                 'current_idx': idx + 1, 'total': len(projects), 'project': project_name
             })
-            
+
             # Create/Load state
             state = PipelineState.load(project_name)
-            
+
             STAGE_ORDER = [
-                None, 'new', 'loaded', 'stitched', 'detected1', 'cropped1', 
+                None, 'new', 'loaded', 'stitched', 'detected1', 'cropped1',
                 'stitched2', 'detected2', 'cropped2', 'text_extracted', 'narrated',
                 'audio_generated', 'video_generated'
             ]
@@ -818,22 +818,22 @@ def run_batch():
                 'extract_dialogue': 'text_extracted',
                 'narrate_mapped': 'narrated'
             }
-            
+
             for step_name in steps:
                 if orchestrator._should_cancel: break
-                
+
                 # Skip if already done
                 if state:
                     current_stage_idx = STAGE_ORDER.index(state.stage) if state.stage in STAGE_ORDER else 0
                     target_stage = STEP_TO_STAGE.get(step_name)
                     target_stage_idx = STAGE_ORDER.index(target_stage) if target_stage in STAGE_ORDER else 999
-                    
+
                     if current_stage_idx >= target_stage_idx:
                         print(f"[Batch] Skipping '{step_name}' - project already at '{state.stage}'")
                         continue
-                        
+
                 socketio.emit('step_started', {'step': step_name, 'project': project_name})
-                
+
                 if step_name == 'load':
                     state = orchestrator.step_load_images(project_name, folder)
                 elif step_name == 'stitch':
@@ -865,9 +865,9 @@ def run_batch():
                 # handle error
                 if getattr(state, 'error', None):
                     break
-                    
+
         socketio.emit('batch_complete', {'steps': steps})
-        
+
     pipeline_thread = threading.Thread(target=run, daemon=True)
     pipeline_thread.start()
     return jsonify({'status': 'batch_started', 'count': len(projects)})
@@ -1210,7 +1210,7 @@ def delete_panel(project_name, panel_id):
         if p.get('panel_id') == panel_id:
             panel = p
             break
-    
+
     # Also check panels_with_text if not found in panels
     if not panel and state.panels_with_text:
         for p in state.panels_with_text:
@@ -1281,7 +1281,7 @@ def crop_panel(project_name, panel_id):
     panel = next((p for p in state.panels if p.get('panel_id') == panel_id), None)
     if not panel and state.panels_with_text:
         panel = next((p for p in state.panels_with_text if p.get('panel_id') == panel_id), None)
-    
+
     if not panel:
         return jsonify({'error': f'Panel {panel_id} not found. Total panels: {len(state.panels)}, panels_with_text: {len(state.panels_with_text or [])}'}), 404
 
@@ -1367,7 +1367,7 @@ def preview_detection(project_name, page_filename):
     image_path = os.path.join(raw_dir, page_filename)
     if not os.path.exists(image_path):
         return jsonify({'error': 'Image not found'}), 404
-        
+
     try:
         extractor = get_global_extractor()
         jpeg_bytes = extractor.preview_page(image_path)
@@ -1846,7 +1846,7 @@ def get_stitched_image(project_name):
     state = PipelineState.load(project_name)
     print(f"[get_stitched_image] Loaded chapter {state.current_chapter}, is_batch={state.is_batch}")
     print(f"[get_stitched_image] stitched_parts: {state.stitched_parts[:2] if state.stitched_parts else 'None'}")
-    
+
     if hasattr(state, 'stitched_path') and state.stitched_path and os.path.exists(state.stitched_path):
         return jsonify({'parts': [f"/api/raw-image?path={urllib.parse.quote(state.stitched_path)}"]})
     if state.stitched_parts:
@@ -1908,12 +1908,12 @@ def get_clips(project_name):
     """Get list of generated clips for a project"""
     try:
         import re
-        
+
         state = PipelineState.load(project_name)
-        
+
         # Use the state's clips directory (new organized structure)
         clips_dir = state.clips_dir
-        
+
         # Fallback to old locations if clips_dir doesn't exist
         if not os.path.exists(clips_dir):
             # Try old location: project_dir/clips
@@ -1925,7 +1925,7 @@ def get_clips(project_name):
                 alt_clips_dir = os.path.join(config.OUTPUT_DIR, project_name, 'clips')
                 if os.path.exists(alt_clips_dir):
                     clips_dir = alt_clips_dir
-        
+
         # Load panels to get text
         panels_map = {}
         if state.panels_with_text:
@@ -1933,18 +1933,18 @@ def get_clips(project_name):
                 pid = p.get('panel_id')
                 if pid:
                     panels_map[pid] = p.get('narration') or p.get('text') or p.get('dialogue') or ''
-        
+
         # Scan directory for .mp4 files
         clips = []
         if os.path.exists(clips_dir):
             for filename in sorted(os.listdir(clips_dir)):
                 if filename.endswith('.mp4'):
                     filepath = os.path.join(clips_dir, filename)
-                    
+
                     # Extract panel_id from filename (e.g., "scene_0001.mp4" -> 1)
                     match = re.search(r'scene_(\d+)', filename)
                     panel_id = int(match.group(1)) if match else 0
-                    
+
                     # Get duration from video file (optional, skip if moviepy not available)
                     duration = 0
                     try:
@@ -1957,7 +1957,7 @@ def get_clips(project_name):
                         # Average bitrate assumption: ~1MB per 6 seconds
                         file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
                         duration = file_size_mb * 6  # Rough estimate
-                    
+
                     clips.append({
                         'clip_filename': filename,
                         'filename': filename,  # For backward compatibility
@@ -1967,7 +1967,7 @@ def get_clips(project_name):
                         'text': panels_map.get(panel_id, ''),
                         'url': f'/api/clips/{project_name}/{filename}'
                     })
-        
+
         return jsonify({
             'clips': clips,
             'total': len(clips),
@@ -1982,23 +1982,23 @@ def serve_clip(project_name, clip_filename):
     """Serve an individual clip file"""
     try:
         state = PipelineState.load(project_name)
-        
+
         # Use the new organized structure
         clip_path = os.path.join(state.clips_dir, clip_filename)
         if os.path.exists(clip_path):
             return send_file(clip_path, mimetype='video/mp4')
-        
+
         # Fallback to old structure
         possible_dirs = [
             os.path.join(state.project_dir, 'clips'),
             os.path.join(config.OUTPUT_DIR, project_name, 'clips')
         ]
-        
+
         for clips_dir in possible_dirs:
             clip_path = os.path.join(clips_dir, clip_filename)
             if os.path.exists(clip_path):
                 return send_file(clip_path, mimetype='video/mp4')
-        
+
         return jsonify({'error': 'Clip not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2008,7 +2008,7 @@ def serve_clip(project_name, clip_filename):
 def sort_clips():
     """
     Copy and rename clips from multiple chapters into a single folder with sequential numbering.
-    
+
     Request body:
     {
         "output_folder": "/path/to/output",
@@ -2020,77 +2020,77 @@ def sort_clips():
         import re
         import glob
         from pathlib import Path
-        
+
         data = request.json
         output_folder = data.get('output_folder', '').strip()
         start_chapter = int(data.get('start_chapter', 1))
         end_chapter = int(data.get('end_chapter', 1))
-        
+
         if not output_folder:
             return jsonify({'error': 'Output folder is required'}), 400
-        
+
         if start_chapter > end_chapter:
             return jsonify({'error': 'Start chapter must be <= end chapter'}), 400
-        
+
         # Create output folder
         output_path = Path(output_folder)
         output_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Find all project folders that match the chapter range
         projects_dir = Path(config.PROJECTS_DIR)
         clips_dir = Path(config.MANHWA_CLIPS_DIR)
-        
+
         all_clips = []
         clip_counter = 1
-        
+
         for chapter_num in range(start_chapter, end_chapter + 1):
             # Look for clips matching this chapter number
             # Format: Chapter_00000, Chapter_00001, etc.
             chapter_folder_name = f"Chapter_{chapter_num:05d}"
-            
+
             found_clips = False
-            
+
             # Search in manhwa_clips directory for all projects
             for project_dir in clips_dir.iterdir():
                 if not project_dir.is_dir():
                     continue
-                    
+
                 # Look for the chapter folder inside this project
                 chapter_path = project_dir / chapter_folder_name
-                
+
                 if chapter_path.exists() and chapter_path.is_dir():
                     # Get all .mp4 files sorted by name
                     mp4_files = sorted(chapter_path.glob("*.mp4"))
-                    
+
                     for mp4_file in mp4_files:
                         # Copy with sequential naming
                         new_filename = f"{clip_counter:04d}.mp4"
                         new_path = output_path / new_filename
-                        
+
                         # Copy the file
                         shutil.copy2(str(mp4_file), str(new_path))
-                        
+
                         all_clips.append({
                             'original': str(mp4_file),
                             'new': str(new_path),
                             'chapter': chapter_num,
                             'sequence': clip_counter
                         })
-                        
+
                         clip_counter += 1
-                    
+
                     found_clips = True
-            
+
             if not found_clips:
                 print(f"[Sort] No clips found for chapter {chapter_num} (looking for {chapter_folder_name})")
-        
+
         if len(all_clips) == 0:
             return jsonify({
                 'error': f'No clips found for chapters {start_chapter}-{end_chapter}. Make sure you have generated video clips first (step 7-9).',
                 'searched_in': str(clips_dir),
                 'expected_format': f'Chapter_{start_chapter:05d}'
             }), 404
-        
+
         return jsonify({
             'success': True,
             'total_clips': len(all_clips),
@@ -2099,7 +2099,7 @@ def sort_clips():
             'chapter_range': f'{start_chapter}-{end_chapter}',
             'clips': all_clips[:10]  # Return first 10 for reference
         })
-        
+
     except Exception as e:
         import traceback
         return jsonify({
@@ -2132,20 +2132,20 @@ def set_elevenlabs_key():
         from pipeline.elevenlabs_tts import get_elevenlabs_tts
         data = request.json
         api_key = data.get('api_key', '').strip()
-        
+
         if not api_key:
             return jsonify({'error': 'API key is required'}), 400
-        
+
         elevenlabs = get_elevenlabs_tts()
         elevenlabs.set_api_key(api_key)
-        
+
         # Test the API key
         success, message = elevenlabs.test_api_key()
         if success:
             return jsonify({'success': True, 'message': message})
         else:
             return jsonify({'success': False, 'error': message}), 400
-            
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2155,13 +2155,13 @@ def get_elevenlabs_voices():
     try:
         from pipeline.elevenlabs_tts import get_elevenlabs_tts
         elevenlabs = get_elevenlabs_tts()
-        
+
         if not elevenlabs.available:
             return jsonify({'error': 'ElevenLabs API key not configured'}), 400
-        
+
         voices = elevenlabs.get_voices(force_refresh=True)
         return jsonify(voices)
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2171,18 +2171,18 @@ def get_elevenlabs_preview(voice_id):
     try:
         from pipeline.elevenlabs_tts import get_elevenlabs_tts
         elevenlabs = get_elevenlabs_tts()
-        
+
         if not elevenlabs.available:
             return jsonify({'error': 'ElevenLabs API key not configured'}), 400
-        
+
         voices = elevenlabs.get_voices()
         voice = next((v for v in voices if v['voice_id'] == voice_id), None)
-        
+
         if voice and voice.get('preview_url'):
             return jsonify({'preview_url': voice['preview_url']})
         else:
             return jsonify({'error': 'Preview not available for this voice'}), 404
-            
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -2194,18 +2194,18 @@ def generate_voice_preview():
         engine = data.get('engine', 'edge')
         voice = data.get('voice')
         text = data.get('text', 'Hello! This is a preview of how I sound.')
-        
+
         print(f"[Preview] Request: engine={engine}, voice={voice}")
-        
+
         if not voice:
             return jsonify({'error': 'Voice ID is required'}), 400
-        
+
         # For Kokoro, use pre-generated previews to avoid blocking
         if engine == 'kokoro':
             print(f"[Preview] Using pre-generated Kokoro preview...")
             kokoro_preview_dir = os.path.join(config.PROJECTS_DIR, '_previews', 'kokoro')
             kokoro_preview_path = os.path.join(kokoro_preview_dir, f"{voice}.mp3")
-            
+
             if os.path.exists(kokoro_preview_path):
                 # Return pre-generated preview
                 return jsonify({
@@ -2215,16 +2215,16 @@ def generate_voice_preview():
             else:
                 print(f"[Preview] Pre-generated preview not found: {kokoro_preview_path}")
                 return jsonify({'error': 'Preview not available for this Kokoro voice. Please regenerate previews.'}), 404
-        
+
         # For Edge TTS, generate on-demand (it's async and doesn't block)
         preview_dir = os.path.join(config.PROJECTS_DIR, '_previews')
         os.makedirs(preview_dir, exist_ok=True)
-        
+
         # Generate preview filename
         import hashlib
         voice_hash = hashlib.md5(f"{engine}_{voice}".encode()).hexdigest()[:8]
         preview_path = os.path.join(preview_dir, f"preview_{voice_hash}.mp3")
-        
+
         # Check if preview already exists
         if os.path.exists(preview_path):
             print(f"[Preview] Using cached preview: {preview_path}")
@@ -2233,11 +2233,11 @@ def generate_voice_preview():
                 'success': True,
                 'preview_url': f'/api/preview-audio/{filename}'
             })
-        
+
         # Generate preview audio (Edge TTS only at this point)
         print(f"[Preview] Generating new Edge TTS preview...")
         from pipeline.tts_engine import generate_speech
-        
+
         try:
             if engine == 'elevenlabs':
                 from pipeline.elevenlabs_tts import get_elevenlabs_tts
@@ -2253,7 +2253,7 @@ def generate_voice_preview():
             import traceback
             traceback.print_exc()
             return jsonify({'error': f'Failed to generate preview: {str(gen_error)}'}), 500
-        
+
         print(f"[Preview] Preview generated successfully at {result['audio_path']}")
         filename = os.path.basename(result['audio_path'])
         return jsonify({
@@ -2261,7 +2261,7 @@ def generate_voice_preview():
             'preview_url': f'/api/preview-audio/{filename}',
             'duration': result.get('duration', 0)
         })
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

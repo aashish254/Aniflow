@@ -112,7 +112,7 @@ def crop_panels(image_paths: list[str], state,
         progress_callback(total_pages, total_pages,
                           f"Cropped {panel_counter} story panels "
                           f"({skipped_count} non-story skipped)")
-    
+
     # Save panels metadata to crop directory
     import json
     metadata_path = os.path.join(panels_dir, 'panels_metadata.json')
@@ -122,7 +122,7 @@ def crop_panels(image_paths: list[str], state,
             'skipped_panels': skipped_count,
             'panels': all_panels,
         }, f, indent=2, ensure_ascii=False)
-    
+
     print(f"[Cropper] Saved panels metadata to {metadata_path}")
 
     return all_panels

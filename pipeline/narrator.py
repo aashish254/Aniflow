@@ -94,11 +94,11 @@ class Narrator:
         """Returns a list of dicts: {'name': '...', 'image_path': '...'}"""
         if not cast_characters:
             return []
-        
+
         cast_data_dir = os.path.expanduser("~/RECAP/Cast Data")
         if not os.path.exists(cast_data_dir):
             return []
-            
+
         refs = []
         import json
         for cast_dir in os.listdir(cast_data_dir):
@@ -116,7 +116,7 @@ class Narrator:
                                 refs.append({'name': name, 'image_path': img_path})
                 except Exception as e:
                     pass
-        
+
         # Deduplicate by name
         unique_refs = {}
         for r in refs:
@@ -246,7 +246,7 @@ class Narrator:
             prev_txt = panels[i-1]['text'] if i > 0 and 'text' in panels[i-1] else ""
             curr_txt = panel.get('text', '')
             next_txt = panels[i+1]['text'] if i < len(panels)-1 and 'text' in panels[i+1] else ""
-            
+
             sliding_window = f"--- PREVIOUS PANEL DIALOGUE ---\n{prev_txt}\n\n--- CURRENT PANEL DIALOGUE ---\n{curr_txt}\n\n--- NEXT PANEL DIALOGUE ---\n{next_txt}"
 
             panel['narration'] = self.narrate_panel_with_context(

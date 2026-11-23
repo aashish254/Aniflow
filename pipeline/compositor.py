@@ -354,7 +354,7 @@ def _probe_videotoolbox(fps=30):
 
 def generate_individual_clips(panels, state, progress_callback=None,
                               resolution="1080p", fps=30, quality="medium",
-                              bg_mode="blur", custom_bg_path=None, 
+                              bg_mode="blur", custom_bg_path=None,
                               animation_style="auto", watermark_path=None):
     """
     Generate individual video clips for each panel without concatenating.
@@ -364,13 +364,13 @@ def generate_individual_clips(panels, state, progress_callback=None,
     """
     w, h = RESOLUTION_MAP.get(resolution, (1920, 1080))  # Default to 1080p landscape
     fps = fps if fps in FPS_OPTIONS else 30
-    
+
     clips_dir = state.clips_dir
     os.makedirs(clips_dir, exist_ok=True)
-    
+
     total_panels = len(panels)
     clip_metadata = []
-    
+
     bitrate_map = {'low': '2000k', 'medium': '5000k', 'high': '8000k'}
     if resolution in ["2k", "2k_landscape"]:
         bitrate_map = {'low': '4000k', 'medium': '8000k', 'high': '12000k'}
@@ -476,7 +476,7 @@ def generate_individual_clips(panels, state, progress_callback=None,
                 audio_clip.close()
             except Exception:
                 pass
-        
+
         # Calculate clip duration
         clip_duration = _get_dynamic_duration(panel, audio_duration)
 
@@ -511,15 +511,15 @@ def generate_individual_clips(panels, state, progress_callback=None,
                     }
             except Exception as e:
                 print(f"[Compositor] ffmpeg-native path error for panel {panel_id}: {e} — using moviepy")
-        
+
         # Create panel clip
         panel_clip = _make_panel_clip(panel, w, h, clip_duration, fps, i,
                                       bg_mode, custom_bg_path, animation_style)
-        
+
         # Add vignette
         vignette = _create_vignette(w, h, clip_duration)
         composed = CompositeVideoClip([panel_clip, vignette]).with_duration(clip_duration)
-        
+
         # Add audio
         if audio_path and os.path.exists(audio_path):
             try:
@@ -527,7 +527,7 @@ def generate_individual_clips(panels, state, progress_callback=None,
                 composed = composed.with_audio(audio_clip)
             except Exception as e:
                 print(f"[Compositor] Audio error for panel {panel_id}: {e}")
-        
+
         # Add watermark if provided
         if watermark_path and os.path.exists(watermark_path):
             try:
@@ -537,14 +537,14 @@ def generate_individual_clips(panels, state, progress_callback=None,
                 composed = CompositeVideoClip([composed, watermark_img])
             except Exception:
                 pass
-        
+
         # Unique temp audio file per clip
         temp_audio = os.path.join(clips_dir, f"TEMP_audio_{panel_id:05d}.mp4")
-        
+
         try:
             # Write individual clip
             _write_clip(composed, clip_path, temp_audio)
-            
+
             # Store metadata
             return {
                 'panel_id': panel_id,
@@ -556,7 +556,7 @@ def generate_individual_clips(panels, state, progress_callback=None,
                 'resolution': f"{w}x{h}",
                 'fps': fps,
             }
-            
+
         except Exception as e:
             print(f"[Compositor] Failed to generate clip for panel {panel_id}: {e}")
             return None
@@ -597,7 +597,7 @@ def generate_individual_clips(panels, state, progress_callback=None,
             meta = _build_one_clip(panel, i)
             if meta:
                 clip_metadata.append(meta)
-    
+
     # Save clips metadata
     import json
     metadata_path = os.path.join(clips_dir, 'clips_metadata.json')
@@ -611,7 +611,7 @@ def generate_individual_clips(panels, state, progress_callback=None,
             'clips': clip_metadata,
         }, f, indent=2, ensure_ascii=False)
     print(f"[Compositor] Saved clips metadata to {metadata_path}")
-    
+
     return clip_metadata
 
 
@@ -1098,16 +1098,16 @@ def _create_panel_clip(image_path, video_w, video_h, duration, fps, panel_index,
         big_w, big_h = base_big.size
 
         import random
-        
+
         # Handle "none" - static image
         if animation_style == "none":
             return ImageClip(bg_array, duration=duration)
-        
+
         # Handle "random" - pick a random animation
         if animation_style == "random":
             available_styles = ["zoom_in", "zoom_out", "slide_left", "slide_right", "slide_up", "slide_down"]
             animation_style = random.choice(available_styles)
-        
+
         # Map animation_style to effect type
         if animation_style == "auto":
             effect = panel_index % 6
@@ -1129,7 +1129,7 @@ def _create_panel_clip(image_path, video_w, video_h, duration, fps, panel_index,
         def make_frame_16_9(t):
             progress = t / max(duration, 0.01)
             eased = _ease_in_out(progress)
-            
+
             if effect == 0:  # zoom_in
                 current_zoom = zoom_min + (zoom_max - zoom_min) * eased
                 cx_progress, cy_progress = 0.5, 0.5
@@ -1155,15 +1155,15 @@ def _create_panel_clip(image_path, video_w, video_h, duration, fps, panel_index,
             else:
                 current_zoom = zoom_min
                 cx_progress, cy_progress = 0.5, 0.5
-            
+
             cw = int(video_w / current_zoom)
             ch = int(video_h / current_zoom)
             max_x = max(big_w - cw, 0)
             max_y = max(big_h - ch, 0)
-            
+
             cx = int(max_x * cx_progress)
             cy = int(max_y * cy_progress)
-            
+
             cx = max(0, min(cx, max_x))
             cy = max(0, min(cy, max_y))
             crop = base_arr[cy:cy+ch, cx:cx+cw]
@@ -1268,18 +1268,18 @@ def _create_panel_clip(image_path, video_w, video_h, duration, fps, panel_index,
 
     # Choose animation
     import random
-    
+
     # Handle "none" - static image
     if animation_style == "none":
         # Static image - just fit and center
         img_fitted = img.resize((video_w, video_h), Image.LANCZOS)
         return ImageClip(np.array(img_fitted), duration=duration)
-    
+
     # Handle "random" - pick a random animation
     if animation_style == "random":
         available_styles = ["zoom_in", "zoom_out", "slide_left", "slide_right", "slide_up", "slide_down"]
         animation_style = random.choice(available_styles)
-    
+
     # Map animation_style to effect type
     if animation_style == "auto":
         effect = panel_index % 6  # Cycle through effects
@@ -1301,7 +1301,7 @@ def _create_panel_clip(image_path, video_w, video_h, duration, fps, panel_index,
     def make_frame(t):
         progress = t / max(duration, 0.01)
         eased = _ease_in_out(progress)
-        
+
         if effect == 0:  # zoom_in
             current_zoom = zoom_min + (zoom_max - zoom_min) * eased
             cx_progress, cy_progress = 0.5, 0.5
@@ -1332,10 +1332,10 @@ def _create_panel_clip(image_path, video_w, video_h, duration, fps, panel_index,
         crop_h = min(int(video_h / (base_scale * current_zoom) * headroom_scale), new_h)
         max_x = max(new_w - crop_w, 0)
         max_y = max(new_h - crop_h, 0)
-        
+
         cx = int(max_x * cx_progress)
         cy = int(max_y * cy_progress)
-        
+
         cx = max(0, min(cx, max_x))
         cy = max(0, min(cy, max_y))
         frame = img_array[cy:cy+crop_h, cx:cx+crop_w]

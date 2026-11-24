@@ -265,11 +265,11 @@ REWRITER_STYLES = {
 def get_manhwa_paths(manhwa_name: str, chapter_num: int) -> dict:
     """
     Get all paths for a manhwa chapter in the new organized structure.
-    
+
     Args:
         manhwa_name: Name of the manhwa (e.g., "Sword-Devouring-Swordmaster")
         chapter_num: Chapter number (e.g., 1, 2, 3...)
-    
+
     Returns:
         Dictionary with all paths for this chapter:
         {
@@ -284,7 +284,7 @@ def get_manhwa_paths(manhwa_name: str, chapter_num: int) -> dict:
         }
     """
     chapter_folder = f"Chapter_{chapter_num:05d}"  # 5 digits for 1000+ chapter support
-    
+
     paths = {
         'download': os.path.join(MANHWA_DOWNLOAD_DIR, manhwa_name, chapter_folder),
         'stitch': os.path.join(MANHWA_STITCH_DIR, manhwa_name, chapter_folder),
@@ -294,28 +294,28 @@ def get_manhwa_paths(manhwa_name: str, chapter_num: int) -> dict:
         'audio': os.path.join(MANHWA_AUDIO_DIR, manhwa_name, chapter_folder),
         'clips': os.path.join(MANHWA_CLIPS_DIR, manhwa_name, chapter_folder),
     }
-    
+
     # Create all directories
     for path in paths.values():
         os.makedirs(path, exist_ok=True)
-    
+
     # Add state file path (stored in download folder)
     paths['state'] = os.path.join(paths['download'], 'state.json')
-    
+
     return paths
 
 
 def get_batch_project_name(manhwa_name: str, start_chapter: int, end_chapter: int) -> str:
     """
     Generate a project name for batch processing.
-    
+
     Examples:
-        get_batch_project_name("Sword-Devouring-Swordmaster", 1, 1) 
+        get_batch_project_name("Sword-Devouring-Swordmaster", 1, 1)
         → "Sword-Devouring-Swordmaster__Chapter_00001"
-        
-        get_batch_project_name("Sword-Devouring-Swordmaster", 1, 5) 
+
+        get_batch_project_name("Sword-Devouring-Swordmaster", 1, 5)
         → "Sword-Devouring-Swordmaster__Chapters_00001-00005"
-        
+
         get_batch_project_name("One Piece", 1, 1500)
         → "One-Piece__Chapters_00001-01500"
     """
@@ -328,7 +328,7 @@ def get_batch_project_name(manhwa_name: str, start_chapter: int, end_chapter: in
 def sanitize_manhwa_name(name: str) -> str:
     """
     Sanitize manhwa name for use in folder paths.
-    
+
     Examples:
         "Sword-Devouring Swordmaster" → "Sword-Devouring-Swordmaster"
         "Urban: System" → "Urban-System"
@@ -346,7 +346,7 @@ def sanitize_manhwa_name(name: str) -> str:
 def chapter_paths(series: str, chapter: str) -> dict:
     """
     Legacy function - redirects to new organized structure.
-    
+
     Folder structure matches the user's plan:
       manhwa_download/<series>/<chapter>/001.img, 002.img ...
       manhwa_crop/<series>/<chapter>/panel_001.png ...
@@ -358,5 +358,5 @@ def chapter_paths(series: str, chapter: str) -> dict:
     import re
     match = re.search(r'(\d+)', chapter)
     chapter_num = int(match.group(1)) if match else 1
-    
+
     return get_manhwa_paths(series, chapter_num)

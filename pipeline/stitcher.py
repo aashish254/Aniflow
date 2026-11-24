@@ -93,7 +93,7 @@ def stitch_images(image_paths: list[str], state,
 
     # Save to new organized structure: manhwa_stitch/{name}/Chapter_{num:05d}/
     os.makedirs(state.stitch_dir, exist_ok=True)
-    
+
     # Use PNG for lossless, or JPEG for smaller files
     if total_height > 65000:
         # Use PNG for very tall images (JPEG max dimension is 65535)
@@ -124,7 +124,7 @@ def export_dataset_stitched(stitched_path: str, state,
                              progress_callback=None) -> list[str]:
     """
     Export dataset-compliant stitched image(s) into the manhwa stitch folder.
-    
+
     New structure:
         manhwa_stitch/{manhwa_name}/Chapter_{num:05d}/
             stitched_full.jpg              (main file)

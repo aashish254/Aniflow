@@ -31,20 +31,12 @@ def _safe_path_join(base_dir: str, filename: str) -> str:
     Raises:
         ValueError: If the filename contains path traversal sequences
     """
-    # Normalize paths to resolve any .. or . components
-    base = Path(base_dir).resolve()
-    full_path = (base / filename).resolve()
+    # Check for path traversal characters in filename
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise ValueError(f"Invalid filename with path traversal: {filename}")
 
-    # Ensure the resulting path is still within base_dir
-    try:
-        full_path.relative_to(base)
-    except ValueError:
-        raise ValueError(f"Path traversal detected: {filename}")
-
-    return str(full_path)
-from pipeline.stitcher import stitch_images, export_dataset_stitched
-from pipeline.cropper import crop_panels
-from pipeline.panel_extractor_yolo import YoloPanelExtractor
+    # Use os.path.join since filename is now validated to not contain separators
+    return os.path.join(base_dir, filename)
 from pipeline.text_extractor import extract_text_all_panels
 from pipeline.text_remover import remove_text_boxes
 from pipeline.narrator import Narrator

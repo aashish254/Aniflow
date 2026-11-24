@@ -12,8 +12,36 @@ If they do (and boxes haven't changed), the step is skipped instantly.
 """
 import hashlib, os, json, time, shutil
 from datetime import datetime
+from pathlib import Path
 import config
 from pipeline.downloader import load_from_folder, validate_images
+
+
+def _safe_path_join(base_dir: str, filename: str) -> str:
+    """
+    Safely join a base directory with a filename, preventing path traversal attacks.
+    
+    Args:
+        base_dir: The base directory path
+        filename: The filename to join (must not contain path separators or ..)
+    
+    Returns:
+        The safe joined path
+    
+    Raises:
+        ValueError: If the filename contains path traversal sequences
+    """
+    # Normalize paths to resolve any .. or . components
+    base = Path(base_dir).resolve()
+    full_path = (base / filename).resolve()
+    
+    # Ensure the resulting path is still within base_dir
+    try:
+        full_path.relative_to(base)
+    except ValueError:
+        raise ValueError(f"Path traversal detected: {filename}")
+    
+    return str(full_path)
 from pipeline.stitcher import stitch_images, export_dataset_stitched
 from pipeline.cropper import crop_panels
 from pipeline.panel_extractor_yolo import YoloPanelExtractor
@@ -428,7 +456,7 @@ class PipelineState:
             if os.path.isdir(self.download_dir):
                 _IMG_EXTS = {".img", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
                 self.raw_pages = sorted([
-                    os.path.join(self.download_dir, f) for f in os.listdir(self.download_dir)
+                    _safe_path_join(self.download_dir, f) for f in os.listdir(self.download_dir)
                     if os.path.splitext(f.lower())[1] in _IMG_EXTS
                 ], key=lambda x: natural_sort_key(os.path.basename(x)))
             else:
@@ -677,13 +705,13 @@ class PipelineState:
                         try:
                             return any(f.lower().endswith(_img_exts)
                                        for f in os.listdir(d)
-                                       if os.path.isfile(os.path.join(d, f)))
-                        except OSError:
+                                       if os.path.isfile(_safe_path_join(d, f)))
+                        except (OSError, ValueError):
                             return False
 
                     ch_dirs = sorted(
                         d for d in os.listdir(root)
-                        if _re.match(r'Chapter_\d{5}$', d) and _has_imgs(os.path.join(root, d))
+                        if _re.match(r'Chapter_\d{5}$', d) and _has_imgs(_safe_path_join(root, d))
                     )
                     if ch_dirs:
                         nums = [int(_re.search(r'(\d+)', d).group(1)) for d in ch_dirs]
@@ -794,7 +822,10 @@ class PipelineState:
         # ── clips_done: video clips exist in manhwa_clips/ ──────────────────
         if os.path.isdir(self.clips_dir):
             clips = [f for f in os.listdir(self.clips_dir) 
-                    if f.endswith('.mp4') and os.path.getsize(os.path.join(self.clips_dir, f)) > 10000]
+                    if f.endswith('.mp4')]
+            # Safely check file sizes with path validation
+            clips = [f for f in clips 
+                    if os.path.getsize(_safe_path_join(self.clips_dir, f)) > 10000]
             if clips:
                 return 'clips_done'
         
@@ -805,7 +836,10 @@ class PipelineState:
         # ── audio_done: audio files exist in manhwa_audio/ ──────────────────
         if os.path.isdir(self.audio_dir):
             audio_files = [f for f in os.listdir(self.audio_dir) 
-                          if f.endswith('.mp3') and os.path.getsize(os.path.join(self.audio_dir, f)) > 1000]
+                          if f.endswith('.mp3')]
+            # Safely check file sizes with path validation
+            audio_files = [f for f in audio_files 
+                          if os.path.getsize(_safe_path_join(self.audio_dir, f)) > 1000]
             if audio_files:
                 return 'audio_done'
 
@@ -816,7 +850,10 @@ class PipelineState:
         # ── text_extracted: text files exist in manhwa_text/ ────────────────
         if os.path.isdir(self.text_dir):
             text_files = [f for f in os.listdir(self.text_dir) 
-                         if f.endswith(('.txt', '.json')) and os.path.getsize(os.path.join(self.text_dir, f)) > 10]
+                         if f.endswith(('.txt', '.json'))]
+            # Safely check file sizes with path validation
+            text_files = [f for f in text_files 
+                         if os.path.getsize(_safe_path_join(self.text_dir, f)) > 10]
             if text_files:
                 return 'text_extracted'
         
@@ -831,13 +868,13 @@ class PipelineState:
             art_panel_files = []
             try:
                 for entry in os.listdir(self.crop_dir):
-                    entry_path = os.path.join(self.crop_dir, entry)
+                    entry_path = _safe_path_join(self.crop_dir, entry)
                     if os.path.isdir(entry_path):
                         art_panel_files += [f for f in os.listdir(entry_path)
                                             if f.startswith('panel_') and f.endswith(('.jpg', '.png'))]
                     elif entry.startswith('panel_') and entry.endswith(('.jpg', '.png')):
                         art_panel_files.append(entry)
-            except OSError:
+            except (OSError, ValueError):
                 pass
             if art_panel_files:
                 return 'cropped2'
@@ -1169,7 +1206,7 @@ class Orchestrator:
         if not state.raw_pages and os.path.isdir(state.download_dir):
             _IMG_EXTS = {".img", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
             state.raw_pages = sorted([
-                os.path.join(state.download_dir, f)
+                _safe_path_join(state.download_dir, f)
                 for f in os.listdir(state.download_dir)
                 if os.path.splitext(f.lower())[1] in _IMG_EXTS
             ])
@@ -1203,7 +1240,7 @@ class Orchestrator:
                     _IMG_EXTS_CH = {".img", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
                     if os.path.isdir(state.download_dir):
                         state.raw_pages = sorted([
-                            os.path.join(state.download_dir, f)
+                            _safe_path_join(state.download_dir, f)
                             for f in os.listdir(state.download_dir)
                             if os.path.splitext(f.lower())[1] in _IMG_EXTS_CH
                         ])
